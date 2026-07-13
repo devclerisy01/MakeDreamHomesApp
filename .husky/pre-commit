@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+# Code-quality gate (qlty) — runs on the files staged for this commit.
+# Auto-fixes formatting (prettier) and eslint's autofixable rules, re-stages the
+# results, then blocks on anything that couldn't be fixed. Bypass in an
+# emergency with `git commit --no-verify`.
+if ! command -v qlty >/dev/null 2>&1; then
+  echo "✖ qlty is not installed — required for the commit check."
+  echo "  Install it: curl https://qlty.sh | sh   (see https://qlty.sh)"
+  exit 1
+fi
+
+# Only the files added/copied/modified/renamed in the index.
+staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -z "$staged" ] && exit 0
+
+# 1) Auto-fix: prettier formatting, then eslint's autofixable rules. `--no-error`
+#    so a non-fixable finding here doesn't abort before the gate below runs.
+# shellcheck disable=SC2086
+echo "$staged" | xargs qlty fmt --trigger=pre-commit --no-error
+# shellcheck disable=SC2086
+echo "$staged" | xargs qlty check --fix --no-error
+
+# 2) Re-stage whatever the autofixers rewrote.
+# shellcheck disable=SC2086
+echo "$staged" | xargs git add
+
+# 3) Gate: block the commit on any issue that couldn't be auto-fixed.
+# shellcheck disable=SC2086
+echo "$staged" | xargs qlty check

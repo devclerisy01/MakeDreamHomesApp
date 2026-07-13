@@ -1,0 +1,43 @@
+# Curated SAST rules for this TypeScript / React (Ionic + Vite + Capacitor) app.
+# qlty's semgrep plugin runs: `semgrep --config .semgrep.yaml`.
+# Enabled as advisory (mode = "comment" in .qlty/qlty.toml) — surfaces in
+# `qlty check`/PRs without blocking commits. Offline + deterministic (no
+# registry network calls). Add semgrep registry packs (p/...) in CI for breadth.
+rules:
+  - id: no-eval
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Avoid eval() — it executes arbitrary code and is a common RCE vector.
+    pattern: eval(...)
+
+  - id: no-function-constructor
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      Avoid the Function constructor — it is equivalent to eval().
+    pattern: new Function(...)
+
+  - id: insecure-randomness
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      Math.random() is not cryptographically secure. Use crypto.randomUUID() or
+      crypto.getRandomValues() for tokens, IDs, OTPs, or anything security-related.
+    pattern: Math.random()
+
+  - id: dangerously-set-inner-html
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      dangerouslySetInnerHTML injects raw HTML and is an XSS vector. Sanitize
+      the value (e.g. DOMPurify) or render it as text instead.
+    pattern: dangerouslySetInnerHTML={...}
+
+  - id: tls-verification-disabled
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >-
+      TLS certificate verification is disabled (rejectUnauthorized: false).
+      This allows man-in-the-middle attacks; only use in local development.
+    pattern: "rejectUnauthorized: false"

@@ -1,0 +1,15 @@
+# Build output & generated files
+dist/
+coverage/
+*.tsbuildinfo
+src/vite-env.d.ts
+
+# Native platforms (Capacitor)
+ios/
+android/
+
+# Dependencies
+node_modules/
+
+# Lockfiles
+package-lock.json
