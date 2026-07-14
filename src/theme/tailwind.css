@@ -1,0 +1,6 @@
+/* Declare cascade-layer order first: `ionic` is lowest priority so app
+   utilities win over Ionic's global resets. Tailwind's own layers follow. */
+@layer ionic, theme, base, components, utilities;
+
+@import "tailwindcss";
+@config "../../tailwind.config.ts";

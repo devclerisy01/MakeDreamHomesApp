@@ -1,0 +1,19 @@
+/* Ionic's global stylesheets, imported into a low-priority cascade layer so the
+   app's Tailwind utilities (which land in the higher `utilities` layer) can
+   override Ionic's unlayered resets — notably `button { padding: 0 }`, which
+   would otherwise zero out every styled button's padding. Layer order is
+   declared in `tailwind.css`. */
+
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/react/css/core.css" layer(ionic);
+
+/* Basic CSS + optional utility CSS */
+@import "@ionic/react/css/normalize.css" layer(ionic);
+@import "@ionic/react/css/structure.css" layer(ionic);
+@import "@ionic/react/css/typography.css" layer(ionic);
+@import "@ionic/react/css/padding.css" layer(ionic);
+@import "@ionic/react/css/float-elements.css" layer(ionic);
+@import "@ionic/react/css/text-alignment.css" layer(ionic);
+@import "@ionic/react/css/text-transformation.css" layer(ionic);
+@import "@ionic/react/css/flex-utils.css" layer(ionic);
+@import "@ionic/react/css/display.css" layer(ionic);

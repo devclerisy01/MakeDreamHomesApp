@@ -3,6 +3,7 @@
 	"entry": [
 		"src/main.tsx",
 		"vite.config.ts",
+		"tailwind.config.ts",
 		"cypress.config.ts",
 		"cypress/support/e2e.ts",
 		"cypress/e2e/**/*.cy.ts"
@@ -16,9 +17,9 @@
 		"@capacitor/haptics",
 		"@capacitor/keyboard",
 		"@capacitor/status-bar",
-		"ionicons",
 		"eslint-plugin-react",
 		"@testing-library/user-event",
+		"tailwindcss",
 		"terser"
 	]
 }

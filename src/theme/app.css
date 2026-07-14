@@ -1,0 +1,48 @@
+/* Ionic-specific styling that Tailwind utilities can't reach (shadow parts,
+   --ion-* vars) plus the skeleton shimmer keyframe. Everything else is Tailwind. */
+
+/* ---- Bottom tab bar ---------------------------------------------------- */
+.mdh-tab-bar {
+	--background: #ffffff;
+	border-top: 1px solid var(--mdh-line);
+	height: 58px;
+	padding-bottom: env(safe-area-inset-bottom);
+}
+.mdh-tab-bar ion-tab-button {
+	--color: var(--mdh-muted-2);
+	--color-selected: var(--mdh-primary);
+}
+.mdh-tab-bar ion-tab-button ion-label {
+	font-size: 11px;
+	font-weight: 600;
+	margin-top: 2px;
+}
+.mdh-tab-bar ion-tab-button ion-icon {
+	font-size: 22px;
+}
+/* Full-screen routes (login) hide the tab bar. */
+.mdh-tab-bar--hidden {
+	display: none;
+}
+
+/* ---- Header toolbar ---------------------------------------------------- */
+.mdh-header ion-toolbar {
+	--background: #ffffff;
+	--border-width: 0;
+	--min-height: 54px;
+}
+
+/* ---- Skeleton shimmer -------------------------------------------------- */
+.mdh-shimmer {
+	background: linear-gradient(90deg, #eceef3 25%, #f5f6f9 37%, #eceef3 63%);
+	background-size: 400% 100%;
+	animation: mdh-shimmer 1.4s ease infinite;
+}
+@keyframes mdh-shimmer {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0 50%;
+	}
+}
