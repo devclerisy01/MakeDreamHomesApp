@@ -11,14 +11,14 @@ export function CategoryTabs<T extends string>({
 	onChange,
 }: CategoryTabsProps<T>) {
 	return (
-		<div className="flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+		<div className="flex gap-1.5 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 			{tabs.map((tab) => (
 				<button
 					key={tab.id}
 					type="button"
 					aria-pressed={tab.id === active}
 					onClick={() => onChange(tab.id)}
-					className={`shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold ${
+					className={`shrink-0 cursor-pointer whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-semibold ${
 						tab.id === active
 							? "border-primary bg-primary text-white"
 							: "border-line bg-white text-muted"

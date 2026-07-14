@@ -17,7 +17,7 @@ import {
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { CategoryChips } from "@/components/auth/CategoryChips";
+import { CategoryChips } from "@/components/common/CategoryChips";
 import { OtpVerify } from "@/components/auth/OtpVerify";
 import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
 import { TextField } from "@/components/common/TextField";

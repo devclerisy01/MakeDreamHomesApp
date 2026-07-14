@@ -1,6 +1,82 @@
 import { LISTING_PAGE_SIZE } from "@/config/api";
-import { apiGetEnvelope } from "@/lib/api/client";
+import { apiGetEnvelope, apiPost, apiUpload } from "@/lib/api/client";
 import type { Lead, LeadCategoryId } from "@/types";
+
+/**
+ * Uploads a requirement attachment (`POST /app/uploads/image?folder=leads`) and
+ * returns the bucket key to persist — same endpoint the web app uses. The key
+ * (not the URL) is stored on the lead's `imageUrl`; reads resolve it later.
+ */
+export async function uploadLeadAttachment(file: File): Promise<string> {
+	const form = new FormData();
+	form.append("file", file);
+	const { key } = await apiUpload<{ key: string; url: string }>(
+		"/app/uploads/image?folder=leads",
+		form,
+	);
+	return key;
+}
+
+/** The kind of requirement being posted (mirrors the web `RequirementType`). */
+export type RequirementType = "professional" | "property" | "material";
+
+/** Data the Post Requirement form collects before it's mapped to the API body. */
+export interface RequirementInput {
+	type: RequirementType;
+	/** Buy/sell — property & material only (professional has no intent). */
+	intent?: "buy" | "sell";
+	/** Professional / material: selected category names (become the lead tags). */
+	categories?: string[];
+	/** Property: encoded `"group,type"` (e.g. `"residential,flat"`). */
+	propertyRequirement?: string;
+	/** Society name (buy residential) or commercial property name. */
+	placeName?: string;
+	description: string;
+	address?: string;
+	/** Raw price digits; sent as a decimal `budget` only when positive. */
+	price?: string;
+	/** Comma-joined attachment bucket keys (sell requirements only). */
+	imageUrl?: string;
+}
+
+/**
+ * Posts a requirement to `POST /app/leads` (auth). Maps the form input to the
+ * body the API expects, exactly like the web app's `toLeadBody`: buy/sell folds
+ * into the category (`buy_property` / `sell_material` / …); professional stays
+ * plain; `requirement` carries the property `"group,type"` or the joined
+ * category names; `budget` is a positive decimal string or omitted.
+ */
+export async function createRequirement(
+	input: RequirementInput,
+): Promise<void> {
+	const category =
+		input.type === "property"
+			? `${input.intent ?? "buy"}_property`
+			: input.type === "material"
+				? `${input.intent ?? "buy"}_material`
+				: "professional";
+
+	const requirement =
+		input.type === "property"
+			? (input.propertyRequirement ?? "")
+			: (input.categories ?? []).join(",");
+
+	const body: Record<string, string> = {
+		category,
+		requirement,
+		description: input.description.trim(),
+	};
+	if (input.address?.trim()) body.address = input.address.trim();
+	if (input.placeName?.trim()) body.placeName = input.placeName.trim();
+	if (input.imageUrl?.trim()) body.imageUrl = input.imageUrl.trim();
+
+	const price = Number(input.price);
+	if (input.price?.trim() && Number.isFinite(price) && price > 0) {
+		body.budget = price.toFixed(2);
+	}
+
+	await apiPost("/app/leads", body, { auth: true });
+}
 
 export interface LeadsQuery {
 	category?: string;
