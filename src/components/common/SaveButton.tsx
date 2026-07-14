@@ -1,14 +1,13 @@
-import { IonIcon, useIonRouter, useIonToast } from "@ionic/react";
+import { IonIcon, useIonToast } from "@ionic/react";
 import { heart, heartOutline } from "ionicons/icons";
 import { type MouseEvent, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
 
-import { loginHref } from "@/constants/routes";
 import {
 	cachedShortlistIds,
 	getShortlistedIds,
 	toggleSave,
 } from "@/lib/api/shortlists";
+import { useLogin } from "@/lib/auth/login-gate";
 import { isLoggedIn } from "@/lib/auth/session";
 import type { ShortlistEntity } from "@/types";
 
@@ -35,8 +34,7 @@ export function SaveButton({
 	);
 	const [busy, setBusy] = useState(false);
 	const [present] = useIonToast();
-	const router = useIonRouter();
-	const { pathname, search } = useLocation();
+	const { openLogin } = useLogin();
 
 	// Seed the real saved state from the user's shortlist (one shared fetch).
 	useEffect(() => {
@@ -50,22 +48,7 @@ export function SaveButton({
 		};
 	}, [entityType, entityId]);
 
-	const onClick = async (event: MouseEvent) => {
-		event.preventDefault();
-		event.stopPropagation();
-		if (!isLoggedIn()) {
-			void present({
-				message: "Please sign in to save.",
-				duration: 1600,
-				position: "bottom",
-			});
-			router.push(
-				loginHref({ returnTo: `${pathname}${search}` }),
-				"forward",
-				"push",
-			);
-			return;
-		}
+	const doToggle = async () => {
 		if (busy) return;
 		setBusy(true);
 		const next = !saved;
@@ -85,6 +68,17 @@ export function SaveButton({
 		} finally {
 			setBusy(false);
 		}
+	};
+
+	const onClick = (event: MouseEvent) => {
+		event.preventDefault();
+		event.stopPropagation();
+		// Logged-out taps open the sign-in popup in place, then resume the save.
+		if (!isLoggedIn()) {
+			openLogin({ onAuthenticated: () => void doToggle() });
+			return;
+		}
+		void doToggle();
 	};
 
 	return (

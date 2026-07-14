@@ -105,6 +105,12 @@ export function storeSession(session: Session): void {
 	emit({ token: session.accessToken, user });
 }
 
+/** Replaces just the cached user (e.g. a fresh `me()` or a profile edit). */
+export function setStoredUser(user: AuthUser): void {
+	write(USER_KEY, JSON.stringify(user));
+	emit({ token: snapshot.token, user });
+}
+
 /** Clears the whole session (sign-out / invalid token). */
 export function clearSession(): void {
 	remove(ACCESS_KEY);

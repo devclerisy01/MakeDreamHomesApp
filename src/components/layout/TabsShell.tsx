@@ -17,34 +17,31 @@ import {
 import { Redirect, Route, useLocation } from "react-router-dom";
 
 import { ROUTES } from "@/constants/routes";
+import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
 import Home from "@/pages/Home";
 import Leads from "@/pages/Leads";
-import Login from "@/pages/Login";
 import ProfessionalDetail from "@/pages/ProfessionalDetail";
 import Professionals from "@/pages/Professionals";
 import Profile from "@/pages/Profile";
 import Requirement from "@/pages/Requirement";
-import Saved from "@/pages/Saved";
 import Signup from "@/pages/Signup";
 
 /**
- * App shell: five tabs plus the full-screen auth route. The tab bar is hidden
- * on `/login` (via a location-aware class) so the login screen fills the
- * viewport — matching the design — while every other route keeps the tab bar.
- * Rendered inside `IonReactRouter`, so `useLocation` is available here.
+ * App shell: five tabs plus the full-screen signup route. The tab bar is hidden
+ * on `/register` so signup fills the viewport; sign-in is an in-place popup (see
+ * the "Login" tab → `openLogin`), so there's no login route. Rendered inside
+ * `IonReactRouter`, so `useLocation` is available here.
  */
 export function TabsShell() {
 	const { pathname } = useLocation();
 	const { isAuthed } = useAuth();
-	const hideTabBar = pathname === ROUTES.login || pathname === ROUTES.register;
+	const { openLogin } = useLogin();
+	const hideTabBar = pathname === ROUTES.register;
 
 	return (
 		<IonTabs>
 			<IonRouterOutlet>
-				<Route exact path="/login">
-					<Login />
-				</Route>
 				<Route exact path="/register">
 					<Signup />
 				</Route>
@@ -65,9 +62,6 @@ export function TabsShell() {
 				</Route>
 				<Route exact path="/profile">
 					<Profile />
-				</Route>
-				<Route exact path="/saved">
-					<Saved />
 				</Route>
 				<Route exact path="/">
 					<Redirect to="/home" />
@@ -102,7 +96,11 @@ export function TabsShell() {
 						<IonLabel>Profile</IonLabel>
 					</IonTabButton>
 				) : (
-					<IonTabButton tab="login" href="/login">
+					<IonTabButton
+						tab="login"
+						onClick={() => openLogin()}
+						// No `href`: sign-in is an in-place popup, not a route.
+					>
 						<IonIcon icon={logInOutline} />
 						<IonLabel>Login</IonLabel>
 					</IonTabButton>

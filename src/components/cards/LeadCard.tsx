@@ -22,9 +22,12 @@ const CATEGORY_ICON: Record<LeadCategoryId, string> = {
 export function LeadCard({
 	lead,
 	onSaveToggle,
+	owned = false,
 }: {
 	lead: Lead;
 	onSaveToggle?: (saved: boolean) => void;
+	/** The signed-in user's own lead — hides the save heart. */
+	owned?: boolean;
 }) {
 	const intent = leadIntent(lead.category);
 	const icon = CATEGORY_ICON[leadBaseCategory(lead.category)];
@@ -54,11 +57,13 @@ export function LeadCard({
 						<h3 className="m-0 line-clamp-2 text-[15px] font-bold leading-snug text-ink">
 							{title}
 						</h3>
-						<SaveButton
-							entityType="leads"
-							entityId={lead.id}
-							onToggle={onSaveToggle}
-						/>
+						{owned ? null : (
+							<SaveButton
+								entityType="leads"
+								entityId={lead.id}
+								onToggle={onSaveToggle}
+							/>
+						)}
 					</div>
 					<div className="mt-2 flex flex-wrap items-center gap-1.5">
 						{tags.map((tag) => (

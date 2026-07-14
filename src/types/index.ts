@@ -19,7 +19,9 @@ export interface CategoryAverages {
 export interface PortfolioItem {
 	id: string;
 	title: string;
-	city: string;
+	/** Directory/showcase items carry `city`; the detail endpoint sends `location`. */
+	city?: string;
+	location?: string;
 	address?: string;
 	image?: string;
 }

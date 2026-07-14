@@ -2,6 +2,7 @@ import { IonApp, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 
 import { TabsShell } from "@/components/layout/TabsShell";
+import { LoginGateProvider } from "@/lib/auth/login-gate";
 
 /* Tailwind first: it declares the cascade-layer order (incl. `ionic`). */
 import "@/theme/tailwind.css";
@@ -18,7 +19,9 @@ setupIonicReact({ mode: "md" });
 const App: React.FC = () => (
 	<IonApp>
 		<IonReactRouter>
-			<TabsShell />
+			<LoginGateProvider>
+				<TabsShell />
+			</LoginGateProvider>
 		</IonReactRouter>
 	</IonApp>
 );

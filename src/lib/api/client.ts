@@ -31,8 +31,6 @@ interface ApiEnvelope<T> {
 interface RequestOptions {
 	method?: string;
 	body?: unknown;
-	/** Multipart body — sent as-is; the browser sets the Content-Type boundary. */
-	form?: FormData;
 	/** Attach a Bearer token and refresh-and-retry on a 401. */
 	auth?: boolean;
 	signal?: AbortSignal;
@@ -43,7 +41,7 @@ async function requestEnvelope<T>(
 	path: string,
 	opts: RequestOptions = {},
 ): Promise<ApiEnvelope<T>> {
-	const { method = "GET", body, form, auth = false, signal } = opts;
+	const { method = "GET", body, auth = false, signal } = opts;
 
 	let token: string | null = null;
 	if (auth) {
@@ -53,20 +51,13 @@ async function requestEnvelope<T>(
 
 	const build = (bearer: string | null): RequestInit => {
 		const headers: Record<string, string> = {};
-		// Never set Content-Type for FormData — the browser adds the boundary.
-		if (form === undefined && body !== undefined) {
-			headers["Content-Type"] = "application/json";
-		}
+		if (body !== undefined) headers["Content-Type"] = "application/json";
 		if (bearer) headers.Authorization = `Bearer ${bearer}`;
 		return {
 			method,
 			headers,
 			signal,
-			...(form !== undefined
-				? { body: form }
-				: body !== undefined
-					? { body: JSON.stringify(body) }
-					: {}),
+			...(body !== undefined ? { body: JSON.stringify(body) } : {}),
 		};
 	};
 
@@ -157,7 +148,7 @@ export function apiPost<T>(
 	return request<T>(path, { method: "POST", body, ...opts });
 }
 
-/** POST multipart form data with a Bearer token (e.g. an image upload). */
-export function apiUpload<T>(path: string, form: FormData): Promise<T> {
-	return request<T>(path, { method: "POST", form, auth: true });
+/** PATCH JSON with a Bearer token (e.g. profile updates). */
+export function apiPatch<T>(path: string, body: unknown): Promise<T> {
+	return request<T>(path, { method: "PATCH", body, auth: true });
 }

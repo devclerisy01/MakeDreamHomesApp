@@ -9,20 +9,19 @@ import {
 import {
 	arrowForward,
 	checkmarkOutline,
-	constructOutline,
-	cubeOutline,
-	homeOutline,
-	personOutline,
+	chevronBackOutline,
 } from "ionicons/icons";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { CategoryChips } from "@/components/common/CategoryChips";
+import { LoginArt } from "@/components/auth/LoginArt";
 import { OtpVerify } from "@/components/auth/OtpVerify";
 import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
+import { CategoryChips } from "@/components/common/CategoryChips";
 import { TextField } from "@/components/common/TextField";
-import { loginHref, ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/constants/routes";
 import { checkPhone, otpRegister, requestOtp } from "@/lib/api/auth";
+import { useLogin } from "@/lib/auth/login-gate";
 import {
 	type CategoryOption,
 	getMaterialCategories,
@@ -32,26 +31,11 @@ import { storeSession } from "@/lib/auth/session";
 
 type RoleId = "user" | "professional" | "dealer" | "supplier";
 
-const ROLES: { id: RoleId; label: string; userType: string; icon: string }[] = [
-	{ id: "user", label: "User", userType: "person", icon: personOutline },
-	{
-		id: "professional",
-		label: "Professional",
-		userType: "professional",
-		icon: constructOutline,
-	},
-	{
-		id: "dealer",
-		label: "Property Dealer",
-		userType: "dealer",
-		icon: homeOutline,
-	},
-	{
-		id: "supplier",
-		label: "Material Supplier",
-		userType: "supplier",
-		icon: cubeOutline,
-	},
+const ROLES: { id: RoleId; label: string; userType: string }[] = [
+	{ id: "user", label: "User", userType: "person" },
+	{ id: "professional", label: "Professional", userType: "professional" },
+	{ id: "dealer", label: "Property Dealer", userType: "dealer" },
+	{ id: "supplier", label: "Material Supplier", userType: "supplier" },
 ];
 
 function safeReturnTo(raw: string | null): string | null {
@@ -66,6 +50,7 @@ function safeReturnTo(raw: string | null): string | null {
  */
 export default function Signup() {
 	const router = useIonRouter();
+	const { openLogin } = useLogin();
 	const [present] = useIonToast();
 	const { search } = useLocation();
 	const query = useMemo(() => new URLSearchParams(search), [search]);
@@ -141,11 +126,11 @@ export default function Signup() {
 					duration: 2200,
 					position: "top",
 				});
-				router.push(
-					loginHref({ phone, returnTo: returnTo ?? undefined }),
-					"forward",
-					"push",
-				);
+				openLogin({
+					phone,
+					onAuthenticated: () =>
+						router.push(returnTo ?? ROUTES.home, "root", "replace"),
+				});
 				return;
 			}
 			const otp = await requestOtp(phone);
@@ -220,8 +205,16 @@ export default function Signup() {
 
 	return (
 		<IonPage>
-			<IonContent>
-				<div className="mx-auto flex min-h-full w-full max-w-[460px] flex-col px-6 pb-8 pt-[calc(env(safe-area-inset-top)+2.5rem)]">
+			<IonContent
+				style={{
+					"--background":
+						"linear-gradient(180deg,#eaf0fc 0%,#f4f7fd 42%,#eaf0fc 100%)",
+				}}
+			>
+				{/* Decorative house/pin scene anchored to the bottom (matches design). */}
+				<LoginArt className="pointer-events-none absolute inset-x-0 bottom-0 z-0 w-full" />
+
+				<div className="relative z-10 mx-auto flex min-h-full w-full max-w-[460px] flex-col px-6 pb-[210px] pt-[calc(env(safe-area-inset-top)+1.25rem)]">
 					{view === "otp" ? (
 						<OtpVerify
 							phone={phone}
@@ -241,10 +234,10 @@ export default function Signup() {
 							<button
 								type="button"
 								onClick={() => router.push(ROUTES.home, "root", "replace")}
-								aria-label="Go to home"
-								className="-ml-2 mb-3 flex h-9 w-9 items-center justify-center rounded-full text-ink active:bg-black/5"
+								aria-label="Back to home"
+								className="-ml-2 mb-1 flex h-9 w-9 items-center justify-center rounded-full text-muted-light active:bg-black/5"
 							>
-								<IonIcon icon={homeOutline} className="text-2xl" />
+								<IonIcon icon={chevronBackOutline} className="text-2xl" />
 							</button>
 
 							<h1 className="text-[28px] font-bold leading-tight text-ink">
@@ -255,40 +248,29 @@ export default function Signup() {
 							</p>
 
 							<form onSubmit={submitForm} className="mt-6 flex flex-col gap-4">
-								<div className="grid grid-cols-2 gap-3">
+								{/* Account-type pill selector (User / Professional / …). */}
+								<div
+									role="radiogroup"
+									aria-label="Account type"
+									className="flex w-full items-center justify-between rounded-full border border-line bg-white p-1"
+								>
 									{ROLES.map((option) => {
 										const selected = option.id === role;
 										return (
 											<button
 												key={option.id}
 												type="button"
-												aria-pressed={selected}
+												role="radio"
+												aria-checked={selected}
 												onClick={() => {
 													setRole(option.id);
 													setCategoriesError(null);
 												}}
-												className={`flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
-													selected
-														? "border-primary bg-primary-light/50"
-														: "border-line bg-white"
+												className={`whitespace-nowrap rounded-full px-2 py-2 text-[10.5px] font-semibold transition-colors ${
+													selected ? "bg-primary text-white" : "text-muted"
 												}`}
 											>
-												<span
-													className={`grid h-11 w-11 place-items-center rounded-xl ${
-														selected
-															? "bg-primary text-white"
-															: "bg-surface-muted text-ink"
-													}`}
-												>
-													<IonIcon icon={option.icon} className="text-xl" />
-												</span>
-												<span
-													className={`text-sm font-bold ${
-														selected ? "text-primary" : "text-ink"
-													}`}
-												>
-													{option.label}
-												</span>
+												{option.label}
 											</button>
 										);
 									})}
@@ -426,11 +408,11 @@ export default function Signup() {
 									type="button"
 									className="font-bold text-primary"
 									onClick={() =>
-										router.push(
-											loginHref({ phone, returnTo: returnTo ?? undefined }),
-											"forward",
-											"push",
-										)
+										openLogin({
+											phone,
+											onAuthenticated: () =>
+												router.push(returnTo ?? ROUTES.home, "root", "replace"),
+										})
 									}
 								>
 									Sign in

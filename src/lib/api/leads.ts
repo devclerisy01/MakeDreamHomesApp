@@ -1,20 +1,15 @@
 import { LISTING_PAGE_SIZE } from "@/config/api";
-import { apiGetEnvelope, apiPost, apiUpload } from "@/lib/api/client";
+import { apiGetEnvelope, apiPost } from "@/lib/api/client";
+import { uploadImageViaPresign } from "@/lib/api/uploads";
 import type { Lead, LeadCategoryId } from "@/types";
 
 /**
- * Uploads a requirement attachment (`POST /app/uploads/image?folder=leads`) and
- * returns the bucket key to persist — same endpoint the web app uses. The key
- * (not the URL) is stored on the lead's `imageUrl`; reads resolve it later.
+ * Uploads a requirement attachment directly to storage via a presigned URL and
+ * returns the bucket key to persist — same flow the web app uses. The key (not a
+ * URL) is stored on the lead's `imageUrl`; reads resolve it later.
  */
-export async function uploadLeadAttachment(file: File): Promise<string> {
-	const form = new FormData();
-	form.append("file", file);
-	const { key } = await apiUpload<{ key: string; url: string }>(
-		"/app/uploads/image?folder=leads",
-		form,
-	);
-	return key;
+export function uploadLeadAttachment(file: File): Promise<string> {
+	return uploadImageViaPresign(file, "leads");
 }
 
 /** The kind of requirement being posted (mirrors the web `RequirementType`). */
@@ -33,6 +28,13 @@ export interface RequirementInput {
 	placeName?: string;
 	description: string;
 	address?: string;
+	/** Structured address parts from the Google Places autocomplete selection. */
+	locality?: string;
+	city?: string;
+	state?: string;
+	pincode?: string;
+	latitude?: string;
+	longitude?: string;
 	/** Raw price digits; sent as a decimal `budget` only when positive. */
 	price?: string;
 	/** Comma-joined attachment bucket keys (sell requirements only). */
@@ -67,6 +69,12 @@ export async function createRequirement(
 		description: input.description.trim(),
 	};
 	if (input.address?.trim()) body.address = input.address.trim();
+	if (input.locality?.trim()) body.locality = input.locality.trim();
+	if (input.city?.trim()) body.city = input.city.trim();
+	if (input.state?.trim()) body.state = input.state.trim();
+	if (input.pincode?.trim()) body.pincode = input.pincode.trim();
+	if (input.latitude?.trim()) body.latitude = input.latitude.trim();
+	if (input.longitude?.trim()) body.longitude = input.longitude.trim();
 	if (input.placeName?.trim()) body.placeName = input.placeName.trim();
 	if (input.imageUrl?.trim()) body.imageUrl = input.imageUrl.trim();
 
@@ -158,6 +166,14 @@ export function fetchShortlistedLeads(
 	signal?: AbortSignal,
 ): Promise<LeadsPage> {
 	return fetchLeadsPage("/app/shortlists/leads", query, true, signal);
+}
+
+/** One page of the signed-in user's own posted leads (`GET /app/leads/mine`). */
+export function getMyLeads(
+	query: LeadsQuery = {},
+	signal?: AbortSignal,
+): Promise<LeadsPage> {
+	return fetchLeadsPage("/app/leads/mine", query, true, signal);
 }
 
 /** Buy/sell intent derived from the raw category (`buy_property` → "buy"). */

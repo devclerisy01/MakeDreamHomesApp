@@ -7,6 +7,10 @@ import { STORAGE_PUBLIC_URL } from "@/config/api";
  */
 export function assetUrl(path?: string | null): string | null {
 	if (!path) return null;
-	if (/^https?:\/\//i.test(path)) return path;
+	// Already-loadable URLs pass through: remote (http/https), local object-URL
+	// previews (blob:) and inline data URIs (data:).
+	if (/^(https?:|blob:|data:)/i.test(path)) return path;
+	// App-relative paths (bundled/public assets) as-is.
+	if (path.startsWith("/")) return path;
 	return `${STORAGE_PUBLIC_URL}${path}`;
 }

@@ -1,6 +1,7 @@
 import {
 	IonContent,
 	IonIcon,
+	IonModal,
 	IonPage,
 	IonSpinner,
 	useIonRouter,
@@ -17,11 +18,20 @@ import {
 } from "ionicons/icons";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
+import { OtpVerify } from "@/components/auth/OtpVerify";
+import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
+import { AddressAutocomplete } from "@/components/common/AddressAutocomplete";
 import { CategoryChips } from "@/components/common/CategoryChips";
 import { TextField } from "@/components/common/TextField";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
-import { loginHref, ROUTES } from "@/constants/routes";
+import { ROUTES } from "@/constants/routes";
+import {
+	checkPhone,
+	otpRegister,
+	requestOtp,
+	type RegisterInput,
+} from "@/lib/api/auth";
 import {
 	createRequirement,
 	type RequirementType,
@@ -32,7 +42,9 @@ import {
 	getMaterialCategories,
 	getProfessionalCategories,
 } from "@/lib/api/misc";
-import { isLoggedIn } from "@/lib/auth/session";
+import type { AddressResult } from "@/lib/api/places";
+import { useLogin } from "@/lib/auth/login-gate";
+import { storeSession, useAuth } from "@/lib/auth/session";
 import { CARD } from "@/lib/ui";
 
 type Intent = "buy" | "sell";
@@ -112,6 +124,8 @@ const CHIP_OFF = "border-line bg-white text-muted";
 export default function Requirement() {
 	const router = useIonRouter();
 	const [present] = useIonToast();
+	const { isAuthed } = useAuth();
+	const { openLogin } = useLogin();
 
 	const [type, setType] = useState<RequirementType>("professional");
 	const [proIntent, setProIntent] = useState<ProIntent>("hire");
@@ -131,6 +145,8 @@ export default function Requirement() {
 
 	const [description, setDescription] = useState("");
 	const [address, setAddress] = useState("");
+	// Structured parts from the last autocomplete selection; cleared on manual edit.
+	const [addressMeta, setAddressMeta] = useState<AddressResult | null>(null);
 	const [price, setPrice] = useState("");
 	const [priceUnsure, setPriceUnsure] = useState(false);
 
@@ -143,6 +159,18 @@ export default function Requirement() {
 	const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 	const attachmentsRef = useRef<Attachment[]>([]);
 	attachmentsRef.current = attachments;
+
+	// Guest (logged-out) inline sign-up: name + phone → OTP → account, then post.
+	const [phone, setPhone] = useState("");
+	const [firstName, setFirstName] = useState("");
+	const [lastName, setLastName] = useState("");
+	const [phoneError, setPhoneError] = useState<string | null>(null);
+	const [nameError, setNameError] = useState<string | null>(null);
+	const [otpOpen, setOtpOpen] = useState(false);
+	const [verificationId, setVerificationId] = useState("");
+	const [resendAfter, setResendAfter] = useState(60);
+	const [otpError, setOtpError] = useState<string | null>(null);
+	const [verifying, setVerifying] = useState(false);
 
 	// Attachments apply only to "sell" property/material requirements.
 	const showAttachment = type !== "professional" && intent === "sell";
@@ -263,6 +291,7 @@ export default function Requirement() {
 	function resetForm() {
 		setDescription("");
 		setAddress("");
+		setAddressMeta(null);
 		setPrice("");
 		setPriceUnsure(false);
 		setProCats([]);
@@ -276,7 +305,18 @@ export default function Requirement() {
 		setAttachments([]);
 	}
 
-	async function submit() {
+	// Which member type a guest is registered as, derived from the requirement — a
+	// "sell material" post makes them a supplier, an "available for work"
+	// professional post a professional, everything else a plain person (like web).
+	const signupUserType: RegisterInput["userType"] =
+		type === "material" && intent === "sell"
+			? "supplier"
+			: type === "professional" && proIntent === "available"
+				? "professional"
+				: "person";
+
+	/** Validate the shared requirement fields (category + description). */
+	function validateRequirement(): boolean {
 		let invalid = false;
 		if (type === "professional" || type === "material") {
 			if (selectedCategoryNames().length === 0) {
@@ -298,22 +338,12 @@ export default function Requirement() {
 			setDescriptionError("Please describe your requirement.");
 			invalid = true;
 		}
-		if (invalid) return;
+		return !invalid;
+	}
 
-		if (!isLoggedIn()) {
-			void present({
-				message: "Please sign in to post your requirement.",
-				duration: 1600,
-				position: "bottom",
-			});
-			router.push(
-				loginHref({ returnTo: ROUTES.requirement }),
-				"forward",
-				"push",
-			);
-			return;
-		}
-
+	/** Upload attachments and create the lead — for a logged-in post, or right
+	 *  after a guest signs up via OTP. */
+	async function postRequirement() {
 		setSubmitting(true);
 		try {
 			let imageUrl: string | undefined;
@@ -334,7 +364,13 @@ export default function Requirement() {
 				placeName:
 					type === "property" && intent === "sell" ? placeName : undefined,
 				description,
-				address,
+				address: addressMeta?.address || address,
+				locality: addressMeta?.locality,
+				city: addressMeta?.city,
+				state: addressMeta?.state,
+				pincode: addressMeta?.pincode,
+				latitude: addressMeta?.latitude,
+				longitude: addressMeta?.longitude,
 				price: priceUnsure ? "" : price,
 				imageUrl,
 			});
@@ -356,6 +392,95 @@ export default function Requirement() {
 		} finally {
 			setSubmitting(false);
 		}
+	}
+
+	async function submit() {
+		if (!validateRequirement()) return;
+
+		// Signed in → post straight away.
+		if (isAuthed) {
+			void postRequirement();
+			return;
+		}
+
+		// Guest → validate their details, then start the inline OTP sign-up.
+		let invalid = false;
+		if (!firstName.trim()) {
+			setNameError("Please enter your first name.");
+			invalid = true;
+		}
+		if (phone.length !== PHONE_DIGITS) {
+			setPhoneError("Enter a valid 10-digit mobile number.");
+			invalid = true;
+		}
+		if (invalid) return;
+
+		setSubmitting(true);
+		try {
+			const { exists } = await checkPhone(phone);
+			if (exists) {
+				setPhoneError("This phone number is already registered.");
+				void present({
+					message: "This number already has an account. Please sign in.",
+					duration: 2200,
+					position: "top",
+				});
+				openLogin({ phone });
+				return;
+			}
+			const otp = await requestOtp(phone);
+			setVerificationId(otp.verificationId);
+			setResendAfter(otp.resendAfter);
+			setOtpError(null);
+			setOtpOpen(true);
+		} catch {
+			setPhoneError("Couldn't send the code. Please try again.");
+		} finally {
+			setSubmitting(false);
+		}
+	}
+
+	/** Verify the guest's OTP → create the account → post the requirement. */
+	async function verifyGuestOtp(code: string): Promise<boolean> {
+		setVerifying(true);
+		setOtpError(null);
+		try {
+			const result = await otpRegister({
+				phone,
+				code,
+				verificationId,
+				userType: signupUserType,
+				firstName: firstName.trim() || undefined,
+				lastName: lastName.trim() || undefined,
+				acceptedTerms: true,
+				address: addressMeta?.address || address.trim() || undefined,
+				locality: addressMeta?.locality || undefined,
+				city: addressMeta?.city || undefined,
+				state: addressMeta?.state || undefined,
+				pincode: addressMeta?.pincode || undefined,
+				latitude: addressMeta?.latitude || undefined,
+				longitude: addressMeta?.longitude || undefined,
+				professionalCategoryId:
+					signupUserType === "professional" ? proCats[0] : undefined,
+				supplierProductIds:
+					signupUserType === "supplier" ? materialCats : undefined,
+			});
+			storeSession(result);
+			setOtpOpen(false);
+			await postRequirement();
+			return true;
+		} catch {
+			setOtpError("That code is invalid or expired. Please try again.");
+			return false;
+		} finally {
+			setVerifying(false);
+		}
+	}
+
+	async function resendGuestOtp(): Promise<number> {
+		const otp = await requestOtp(phone);
+		setVerificationId(otp.verificationId);
+		return otp.resendAfter;
 	}
 
 	const categoryPrompt =
@@ -423,6 +548,66 @@ export default function Requirement() {
 			<AppHeader title="Post Your Requirement" />
 			<IonContent>
 				<Container>
+					{/* Logged-out visitors sign up inline: their details are collected
+					    here and an account is created (via OTP) before the lead posts. */}
+					{!isAuthed ? (
+						<section className={`mb-4 p-4 ${CARD}`}>
+							<div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+								<h2 className="m-0 text-base font-bold text-ink">
+									Please enter your details.
+								</h2>
+								<p className="m-0 text-sm text-muted">
+									Already have an account?{" "}
+									<button
+										type="button"
+										onClick={() => openLogin({ phone })}
+										className="font-semibold text-primary underline underline-offset-2"
+									>
+										Please login
+									</button>
+								</p>
+							</div>
+							<div className="mt-3 flex flex-col gap-3">
+								<PhoneField
+									value={phone}
+									onChange={(digits) => {
+										setPhone(digits);
+										if (phoneError) setPhoneError(null);
+									}}
+									error={phoneError}
+								/>
+								<div className="grid grid-cols-2 gap-3">
+									<div>
+										<span className="mb-1.5 block text-sm font-semibold text-ink">
+											First name
+										</span>
+										<TextField
+											value={firstName}
+											onChange={(value) => {
+												setFirstName(value);
+												if (nameError) setNameError(null);
+											}}
+											placeholder="First name"
+											autoCapitalize="words"
+											error={nameError}
+										/>
+									</div>
+									<div>
+										<span className="mb-1.5 block text-sm font-semibold text-ink">
+											Last name
+										</span>
+										<TextField
+											value={lastName}
+											onChange={setLastName}
+											placeholder="Last name"
+											autoCapitalize="words"
+										/>
+									</div>
+								</div>
+							</div>
+						</section>
+					) : null}
+
 					<section className={`p-4 ${CARD}`}>
 						<p className="m-0 text-sm font-semibold text-ink">
 							Choose the option that best matches your requirement.
@@ -698,11 +883,20 @@ export default function Requirement() {
 						<span className="mb-1.5 mt-4 block text-sm font-semibold text-ink">
 							Address
 						</span>
-						<TextField
+						<AddressAutocomplete
 							value={address}
-							onChange={setAddress}
-							placeholder="Address"
 							ariaLabel="Address"
+							placeholder="Search your address"
+							enableCurrentLocation
+							onChange={(value) => {
+								setAddress(value);
+								// Editing by hand invalidates the last resolved selection.
+								setAddressMeta(null);
+							}}
+							onSelect={(result) => {
+								setAddress(result.full);
+								setAddressMeta(result);
+							}}
 						/>
 
 						<span className="mb-1.5 mt-4 block text-sm font-semibold text-ink">
@@ -751,6 +945,32 @@ export default function Requirement() {
 						)}
 					</button>
 				</Container>
+
+				{/* Guest OTP step — verifying creates the account, then posts. */}
+				<IonModal
+					isOpen={otpOpen}
+					onDidDismiss={() => setOtpOpen(false)}
+					initialBreakpoint={1}
+					breakpoints={[0, 1]}
+				>
+					<IonContent>
+						<div className="mx-auto flex w-full max-w-[460px] flex-col px-6 pb-10 pt-8">
+							<OtpVerify
+								phone={phone}
+								resendAfter={resendAfter}
+								submitting={verifying}
+								errorText={otpError}
+								submitLabel="Verify & post"
+								onVerify={verifyGuestOtp}
+								onResend={resendGuestOtp}
+								onChangeNumber={() => {
+									setOtpOpen(false);
+									setOtpError(null);
+								}}
+							/>
+						</div>
+					</IonContent>
+				</IonModal>
 			</IonContent>
 		</IonPage>
 	);

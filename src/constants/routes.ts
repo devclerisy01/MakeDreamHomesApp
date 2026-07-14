@@ -5,13 +5,11 @@ export const ROUTES = {
 	requirement: "/requirement",
 	professionals: "/professionals",
 	profile: "/profile",
-	login: "/login",
 	register: "/register",
-	saved: "/saved",
 } as const;
 
 interface AuthLinkOptions {
-	/** Pre-fill the phone the user just typed (carried across login ↔ signup). */
+	/** Pre-fill the phone the user just typed (carried into signup). */
 	phone?: string;
 	/** Where to land after auth succeeds. */
 	returnTo?: string;
@@ -23,11 +21,6 @@ function authQuery({ phone, returnTo }: AuthLinkOptions): string {
 	if (returnTo) params.set("returnTo", returnTo);
 	const qs = params.toString();
 	return qs ? `?${qs}` : "";
-}
-
-/** Login path, optionally carrying a pre-filled phone and a post-auth return path. */
-export function loginHref(opts: AuthLinkOptions = {}): string {
-	return `${ROUTES.login}${authQuery(opts)}`;
 }
 
 /** Signup path, optionally carrying a pre-filled phone and a post-auth return path. */

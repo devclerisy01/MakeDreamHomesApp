@@ -1,53 +1,66 @@
 import {
 	IonContent,
 	IonIcon,
-	IonPage,
+	IonModal,
 	IonSpinner,
 	useIonRouter,
 	useIonToast,
 } from "@ionic/react";
-import { arrowForward, homeOutline } from "ionicons/icons";
-import { type FormEvent, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { arrowForward, closeOutline } from "ionicons/icons";
+import { type FormEvent, useEffect, useState } from "react";
 
+import { LoginArt } from "@/components/auth/LoginArt";
 import { OtpVerify } from "@/components/auth/OtpVerify";
 import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
-import { registerHref, ROUTES } from "@/constants/routes";
+import { registerHref } from "@/constants/routes";
 import { checkPhone, otpLogin, requestOtp } from "@/lib/api/auth";
 import { storeSession } from "@/lib/auth/session";
 
-function safeReturnTo(raw: string | null): string | null {
-	return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+interface LoginModalProps {
+	isOpen: boolean;
+	/** Pre-fill the phone the user already typed elsewhere. */
+	initialPhone?: string;
+	onClose: () => void;
+	/** Runs after a successful sign-in (session already stored). */
+	onAuthenticated: () => void;
 }
 
 /**
- * Phone + OTP sign-in for existing users, using the same `/app/auth/*` endpoints
- * as the web app. A number with no account is sent to signup (with the number
- * pre-filled); a verified code stores the session and lands on the return page.
+ * Phone + OTP sign-in as an in-place popup (mirrors the web login dropdown), so
+ * the user signs in without leaving the page underneath. Uses the same
+ * `/app/auth/*` endpoints as the rest of the app; a number with no account is
+ * routed to the signup page (with the number pre-filled).
  */
-export default function Login() {
+export function LoginModal({
+	isOpen,
+	initialPhone,
+	onClose,
+	onAuthenticated,
+}: LoginModalProps) {
 	const router = useIonRouter();
 	const [present] = useIonToast();
-	const { search } = useLocation();
-	const query = useMemo(() => new URLSearchParams(search), [search]);
-	const returnTo = safeReturnTo(query.get("returnTo"));
 
 	const [view, setView] = useState<"phone" | "otp">("phone");
-	const [phone, setPhone] = useState(
-		() => query.get("phone")?.replace(/\D/g, "").slice(0, PHONE_DIGITS) ?? "",
-	);
+	const [phone, setPhone] = useState("");
 	const [phoneError, setPhoneError] = useState<string | null>(null);
 	const [verificationId, setVerificationId] = useState("");
 	const [resendAfter, setResendAfter] = useState(60);
 	const [otpError, setOtpError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
+	// Reset to a clean phone step each time the popup opens.
+	useEffect(() => {
+		if (!isOpen) return;
+		setView("phone");
+		setPhone(initialPhone?.replace(/\D/g, "").slice(0, PHONE_DIGITS) ?? "");
+		setPhoneError(null);
+		setOtpError(null);
+		setBusy(false);
+	}, [isOpen, initialPhone]);
+
 	function goToSignup() {
-		router.push(
-			registerHref({ phone, returnTo: returnTo ?? undefined }),
-			"forward",
-			"push",
-		);
+		onClose();
+		router.push(registerHref({ phone }), "forward", "push");
 	}
 
 	async function submitPhone(event: FormEvent) {
@@ -94,7 +107,7 @@ export default function Login() {
 				position: "top",
 				color: "success",
 			});
-			router.push(returnTo ?? ROUTES.home, "root", "replace");
+			onAuthenticated();
 			return true;
 		} catch {
 			setOtpError("That code is invalid or expired. Please try again.");
@@ -126,9 +139,33 @@ export default function Login() {
 	}
 
 	return (
-		<IonPage>
-			<IonContent>
-				<div className="mx-auto flex min-h-full w-full max-w-[460px] flex-col px-6 pb-8 pt-[calc(env(safe-area-inset-top)+2.5rem)]">
+		<IonModal
+			isOpen={isOpen}
+			onDidDismiss={onClose}
+			// Bottom-sheet presentation: leaves a gap above showing the page behind,
+			// which reads better than a full-screen cover.
+			initialBreakpoint={1}
+			breakpoints={[0, 1]}
+		>
+			<IonContent
+				style={{
+					"--background":
+						"linear-gradient(180deg,#eaf0fc 0%,#f4f7fd 42%,#eaf0fc 100%)",
+				}}
+			>
+				{/* Decorative house/pin scene anchored to the bottom (matches design). */}
+				<LoginArt className="pointer-events-none absolute inset-x-0 bottom-0 z-0 w-full" />
+
+				<div className="relative z-10 mx-auto flex w-full max-w-[460px] flex-col px-6 pb-10 pt-[calc(env(safe-area-inset-top)+1rem)]">
+					<button
+						type="button"
+						onClick={onClose}
+						aria-label="Close"
+						className="-mr-2 mb-1 self-end flex h-9 w-9 items-center justify-center rounded-full text-muted-light active:bg-black/5"
+					>
+						<IonIcon icon={closeOutline} className="text-2xl" />
+					</button>
+
 					{view === "otp" ? (
 						<OtpVerify
 							phone={phone}
@@ -145,16 +182,7 @@ export default function Login() {
 						/>
 					) : (
 						<>
-							<button
-								type="button"
-								onClick={() => router.push(ROUTES.home, "root", "replace")}
-								aria-label="Go to home"
-								className="-ml-2 mb-3 flex h-9 w-9 items-center justify-center rounded-full text-ink active:bg-black/5"
-							>
-								<IonIcon icon={homeOutline} className="text-2xl" />
-							</button>
-
-							<h1 className="text-[28px] font-bold leading-tight text-ink">
+							<h1 className="text-[26px] font-bold leading-tight text-ink">
 								Login
 							</h1>
 							<p className="mt-2 max-w-[340px] text-sm leading-relaxed text-muted-light">
@@ -162,7 +190,7 @@ export default function Login() {
 								and professional network.
 							</p>
 
-							<form onSubmit={submitPhone} className="mt-8">
+							<form onSubmit={submitPhone} className="mt-7">
 								<PhoneField
 									value={phone}
 									onChange={(digits) => {
@@ -203,6 +231,6 @@ export default function Login() {
 					)}
 				</div>
 			</IonContent>
-		</IonPage>
+		</IonModal>
 	);
 }
