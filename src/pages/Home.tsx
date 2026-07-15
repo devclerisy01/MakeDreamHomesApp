@@ -13,8 +13,8 @@ import { LeadCard } from "@/components/cards/LeadCard";
 import { ProfessionalCard } from "@/components/cards/ProfessionalCard";
 import { CategoryTabs } from "@/components/common/CategoryTabs";
 import { EmptyState } from "@/components/common/EmptyState";
+import { GlobalSearch } from "@/components/common/GlobalSearch";
 import { HeroArt } from "@/components/common/HeroArt";
-import { SearchBar } from "@/components/common/SearchBar";
 import { SkeletonList } from "@/components/common/Skeletons";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
@@ -90,7 +90,7 @@ export default function Home() {
 				</IonRefresher>
 
 				<Container wide>
-					<SearchBar />
+					<GlobalSearch />
 
 					<section
 						className={`mt-3 flex items-center gap-1 overflow-hidden bg-gradient-to-br from-white to-[#eaf1fd] py-3 pl-4 pr-1 ${CARD}`}

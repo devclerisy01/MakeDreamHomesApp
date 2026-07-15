@@ -1,5 +1,6 @@
 import { LISTING_PAGE_SIZE } from "@/config/api";
-import { apiGetEnvelope, apiPost } from "@/lib/api/client";
+import { apiGet, apiGetEnvelope, apiPost } from "@/lib/api/client";
+import type { LocationFacet } from "@/lib/api/professionals";
 import { uploadImageViaPresign } from "@/lib/api/uploads";
 import type { Lead, LeadCategoryId } from "@/types";
 
@@ -97,6 +98,12 @@ export interface LeadsQuery {
 	radius?: number;
 	/** Decoded professional id to scope leads to (from `?userId=`). */
 	userId?: string;
+	/** buy/sell (property & material) — narrows the category variant. */
+	intent?: string[];
+	/** Property-group tokens (residential / commercial / agriculture). */
+	propertyGroup?: string[];
+	/** Selected `city~locality` location tokens (from the `/filters` facets). */
+	places?: string[];
 }
 
 export interface LeadsPage {
@@ -131,7 +138,32 @@ function buildLeadsParams(query: LeadsQuery): URLSearchParams {
 	}
 
 	if (query.userId?.trim()) params.set("userId", query.userId.trim());
+	for (const v of query.intent ?? []) params.append("intent", v);
+	for (const v of query.propertyGroup ?? []) params.append("propertyGroup", v);
+	for (const token of query.places ?? []) params.append("places", token);
 	return params;
+}
+
+/**
+ * Grouped city→locality location facets for the leads filter (public). Counts
+ * are scoped to the current category/intent/search but not to the selected
+ * location — mirroring the web sidebar.
+ */
+export async function fetchLeadFilters(
+	query: LeadsQuery = {},
+	signal?: AbortSignal,
+): Promise<LocationFacet[]> {
+	const params = new URLSearchParams();
+	if (query.category) params.set("category", query.category);
+	const search = query.search?.trim();
+	if (search) params.set("search", search);
+	for (const v of query.intent ?? []) params.append("intent", v);
+	for (const v of query.propertyGroup ?? []) params.append("propertyGroup", v);
+	return (
+		(await apiGet<LocationFacet[]>(`/app/leads/filters?${params.toString()}`, {
+			signal,
+		})) ?? []
+	);
 }
 
 async function fetchLeadsPage(

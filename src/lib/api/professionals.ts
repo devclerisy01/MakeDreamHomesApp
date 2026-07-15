@@ -115,11 +115,37 @@ export interface DirectoryQuery {
 	lat?: number;
 	lng?: number;
 	radius?: number;
+	/** Single professional-category id (professionals track). */
+	professionalUserType?: string;
+	/** Single supplier product-category id (suppliers track). */
+	productType?: string;
+	/** Selected `city~locality` location tokens (from the `/filters` facets). */
+	places?: string[];
+	/** Only professionals with published reviews. */
+	hasReviews?: boolean;
+	/** Only professionals with an approved portfolio. */
+	hasPortfolio?: boolean;
 }
 
 export interface DirectoryPage {
 	items: ProfessionalListing[];
 	totalPages: number;
+}
+
+/** One selectable locality within a city facet, with its result count + token. */
+export interface LocationArea {
+	id: string;
+	label: string;
+	count: number;
+	/** `city~locality` token to send in `places`. */
+	value: string;
+}
+
+/** A city's grouped locality facets for the directory filter. */
+export interface LocationFacet {
+	id: string;
+	label: string;
+	areas: LocationArea[];
 }
 
 function buildDirectoryParams(query: DirectoryQuery): URLSearchParams {
@@ -150,6 +176,14 @@ function buildDirectoryParams(query: DirectoryQuery): URLSearchParams {
 		params.set("lng", String(query.lng));
 		params.set("radius", String(query.radius));
 	}
+
+	if (query.professionalUserType) {
+		params.set("professionalUserType", query.professionalUserType);
+	}
+	if (query.productType) params.set("productType", query.productType);
+	for (const token of query.places ?? []) params.append("places", token);
+	if (query.hasReviews) params.set("hasReviews", "true");
+	if (query.hasPortfolio) params.set("hasPortfolio", "true");
 	return params;
 }
 
@@ -176,6 +210,33 @@ export function fetchProfessionals(
 	signal?: AbortSignal,
 ): Promise<DirectoryPage> {
 	return fetchUserPage("/app/users", query, false, signal);
+}
+
+/**
+ * Grouped city→locality location facets for the directory filter (public). The
+ * counts are scoped to the current track/type/search but NOT to the selected
+ * location, so a checked place keeps its count — mirroring the web sidebar.
+ */
+export async function fetchDirectoryFilters(
+	query: DirectoryQuery = {},
+	signal?: AbortSignal,
+): Promise<LocationFacet[]> {
+	const params = new URLSearchParams();
+	if (query.category) {
+		params.set("userType", USER_TYPE_BY_CATEGORY[query.category]);
+	}
+	const search = query.search?.trim().slice(0, 100);
+	if (search) params.set("search", search);
+	if (query.professionalUserType) {
+		params.set("professionalUserType", query.professionalUserType);
+	}
+	if (query.productType) params.set("productType", query.productType);
+
+	const data = await apiGet<{ locations: LocationFacet[] }>(
+		`/app/users/filters?${params.toString()}`,
+		{ signal },
+	);
+	return data.locations ?? [];
 }
 
 /** One page of the signed-in user's shortlisted professionals (auth). */
