@@ -22,6 +22,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
 import { Avatar } from "@/components/common/Avatar";
+import { ReadMoreText } from "@/components/common/ReadMoreText";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
 import { AddPortfolioModal } from "@/components/profile/AddPortfolioModal";
@@ -348,9 +349,12 @@ export default function Profile() {
 										<span className="mb-0.5 block text-xs font-bold text-muted-light">
 											About
 										</span>
-										<p className="m-0 whitespace-pre-line text-[13.5px] leading-relaxed text-muted">
-											{about}
-										</p>
+										<ReadMoreText
+											text={about}
+											lines={4}
+											title="About"
+											className="m-0 text-[13.5px] leading-relaxed text-muted"
+										/>
 									</div>
 								) : null}
 							</section>

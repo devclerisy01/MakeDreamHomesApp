@@ -6,8 +6,11 @@ import {
 	people,
 	walletOutline,
 } from "ionicons/icons";
+import { useState } from "react";
 
+import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
 import { SaveButton } from "@/components/common/SaveButton";
+import { useClampOverflow } from "@/hooks/useClampOverflow";
 import { leadBaseCategory, leadIntent } from "@/lib/api/leads";
 import { formatBudget, timeAgo } from "@/lib/format";
 import { CARD, META, TAG_MUTED } from "@/lib/ui";
@@ -36,6 +39,20 @@ export function LeadCard({
 	const tags = (lead.tags ?? []).slice(0, 3);
 	const posted = timeAgo(lead.createdAt);
 
+	// "Read more": reveal when the clamped heading overflows OR there's detail
+	// the card doesn't show (a fuller description or images) — opens the popup.
+	const { ref: headingRef, overflows } =
+		useClampOverflow<HTMLHeadingElement>(title);
+	const [detailsOpen, setDetailsOpen] = useState(false);
+
+	const hasFullerDescription = Boolean(
+		lead.summary?.trim() &&
+		lead.description?.trim() &&
+		lead.description.trim() !== lead.summary.trim(),
+	);
+	const hasMore =
+		overflows || hasFullerDescription || (lead.images?.length ?? 0) > 0;
+
 	return (
 		<div className={`p-3.5 ${CARD}`}>
 			<div className="flex gap-3">
@@ -54,7 +71,10 @@ export function LeadCard({
 
 				<div className="min-w-0 flex-1">
 					<div className="flex items-start justify-between gap-2">
-						<h3 className="m-0 line-clamp-2 text-[15px] font-bold leading-snug text-ink">
+						<h3
+							ref={headingRef}
+							className="m-0 line-clamp-2 text-[15px] font-bold leading-snug text-ink"
+						>
 							{title}
 						</h3>
 						{owned ? null : (
@@ -65,6 +85,15 @@ export function LeadCard({
 							/>
 						)}
 					</div>
+					{hasMore ? (
+						<button
+							type="button"
+							onClick={() => setDetailsOpen(true)}
+							className="mt-1 text-xs font-bold text-primary"
+						>
+							Read more
+						</button>
+					) : null}
 					<div className="mt-2 flex flex-wrap items-center gap-1.5">
 						{tags.map((tag) => (
 							<span key={tag} className={TAG_MUTED}>
@@ -99,6 +128,13 @@ export function LeadCard({
 					</span>
 				) : null}
 			</div>
+
+			<LeadDetailsModal
+				lead={lead}
+				isOpen={detailsOpen}
+				onClose={() => setDetailsOpen(false)}
+				owned={owned}
+			/>
 		</div>
 	);
 }

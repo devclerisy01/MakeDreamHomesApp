@@ -1,6 +1,5 @@
 import { IonIcon, useIonRouter } from "@ionic/react";
 import {
-	arrowForward,
 	documentTextOutline,
 	locationOutline,
 	personOutline,
@@ -126,7 +125,7 @@ export function GlobalSearch() {
 					event.preventDefault();
 					viewAll();
 				}}
-				className="flex items-center gap-2 rounded-[14px] border border-line bg-white py-1.5 pl-3 pr-1.5 shadow-card-sm"
+				className="flex items-center gap-2.5 rounded-[14px] border border-line bg-white px-3.5 py-3 shadow-card-sm"
 			>
 				<IonIcon
 					icon={searchIcon}
@@ -144,14 +143,6 @@ export function GlobalSearch() {
 					}}
 					onFocus={() => setOpen(true)}
 				/>
-				<button
-					type="submit"
-					disabled={!ready}
-					className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[10px] bg-ink text-white disabled:opacity-40"
-					aria-label="Search"
-				>
-					<IonIcon icon={arrowForward} className="text-[18px]" />
-				</button>
 			</form>
 
 			{open && ready ? (

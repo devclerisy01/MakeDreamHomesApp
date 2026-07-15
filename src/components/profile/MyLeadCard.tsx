@@ -5,7 +5,10 @@ import {
 	timeOutline,
 	walletOutline,
 } from "ionicons/icons";
+import { useState } from "react";
 
+import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
+import { useClampOverflow } from "@/hooks/useClampOverflow";
 import { formatBudget, timeAgo } from "@/lib/format";
 import { CARD, META, TAG_MUTED } from "@/lib/ui";
 import type { Lead } from "@/types";
@@ -13,7 +16,8 @@ import type { Lead } from "@/types";
 /**
  * The signed-in user's own lead, styled per the profile "My Leads" design:
  * title + edit affordance, location, estimated price, then tags and a
- * "Posted …" timestamp under a divider.
+ * "Posted …" timestamp under a divider. Clamps the title and reveals "Read more"
+ * (→ full-detail popup) when there's more than the card shows.
  */
 export function MyLeadCard({
 	lead,
@@ -27,10 +31,24 @@ export function MyLeadCard({
 	const tags = (lead.tags ?? []).slice(0, 3);
 	const posted = timeAgo(lead.createdAt);
 
+	const { ref: headingRef, overflows } =
+		useClampOverflow<HTMLHeadingElement>(title);
+	const [detailsOpen, setDetailsOpen] = useState(false);
+	const hasFullerDescription = Boolean(
+		lead.summary?.trim() &&
+		lead.description?.trim() &&
+		lead.description.trim() !== lead.summary.trim(),
+	);
+	const hasMore =
+		overflows || hasFullerDescription || (lead.images?.length ?? 0) > 0;
+
 	return (
 		<div className={`p-4 ${CARD}`}>
 			<div className="flex items-start justify-between gap-2">
-				<h3 className="m-0 line-clamp-3 text-[15px] font-bold leading-snug text-ink">
+				<h3
+					ref={headingRef}
+					className="m-0 line-clamp-3 text-[15px] font-bold leading-snug text-ink"
+				>
 					{title}
 				</h3>
 				{onEdit ? (
@@ -44,6 +62,15 @@ export function MyLeadCard({
 					</button>
 				) : null}
 			</div>
+			{hasMore ? (
+				<button
+					type="button"
+					onClick={() => setDetailsOpen(true)}
+					className="mt-1 text-xs font-bold text-primary"
+				>
+					Read more
+				</button>
+			) : null}
 
 			<div className="mt-2.5 flex flex-col gap-1.5">
 				{lead.location ? (
@@ -80,6 +107,13 @@ export function MyLeadCard({
 					) : null}
 				</div>
 			) : null}
+
+			<LeadDetailsModal
+				lead={lead}
+				isOpen={detailsOpen}
+				onClose={() => setDetailsOpen(false)}
+				owned
+			/>
 		</div>
 	);
 }

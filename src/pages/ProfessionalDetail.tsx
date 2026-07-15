@@ -7,6 +7,7 @@ import { PortfolioCard } from "@/components/cards/PortfolioCard";
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
 import { Avatar } from "@/components/common/Avatar";
 import { EmptyState } from "@/components/common/EmptyState";
+import { ReadMoreText } from "@/components/common/ReadMoreText";
 import { DetailSkeleton } from "@/components/common/Skeletons";
 import { SaveButton } from "@/components/common/SaveButton";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -102,14 +103,12 @@ export default function ProfessionalDetail() {
 											<span className="mb-0.5 block text-xs font-bold text-muted-light">
 												About
 											</span>
-											{pro.about.map((para, i) => (
-												<p
-													key={i}
-													className="m-0 mb-1.5 text-[13.5px] leading-relaxed text-muted"
-												>
-													{para}
-												</p>
-											))}
+											<ReadMoreText
+												text={pro.about.join("\n\n")}
+												lines={5}
+												title="About"
+												className="m-0 text-[13.5px] leading-relaxed text-muted"
+											/>
 										</div>
 									) : null}
 								</div>
