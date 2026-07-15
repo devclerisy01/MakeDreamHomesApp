@@ -1,13 +1,7 @@
 import { IonHeader, IonIcon, IonToolbar, useIonRouter } from "@ionic/react";
-import {
-	chevronBackOutline,
-	chevronDownOutline,
-	globeOutline,
-	menuOutline,
-	notificationsOutline,
-} from "ionicons/icons";
 
 import { ROUTES } from "@/constants/routes";
+import { ICONS } from "@/theme/icons";
 
 interface AppHeaderProps {
 	title?: string;
@@ -15,6 +9,8 @@ interface AppHeaderProps {
 	showLogo?: boolean;
 	/** Show a back chevron (for pushed sub-pages) instead of the menu button. */
 	back?: boolean;
+	/** Blend the toolbar into the Home page's light-blue gradient backdrop. */
+	tinted?: boolean;
 }
 
 /**
@@ -26,11 +22,12 @@ export function AppHeader({
 	title,
 	showLogo = false,
 	back = false,
+	tinted = false,
 }: AppHeaderProps) {
 	const router = useIonRouter();
 
 	return (
-		<IonHeader className="mdh-header">
+		<IonHeader className={`mdh-header${tinted ? " mdh-header--tint" : ""}`}>
 			<IonToolbar>
 				<div className="flex items-center gap-2 px-2.5 py-1">
 					{back ? (
@@ -44,7 +41,7 @@ export function AppHeader({
 									: router.push(ROUTES.home, "root", "replace")
 							}
 						>
-							<IonIcon icon={chevronBackOutline} className="text-2xl" />
+							<IonIcon icon={ICONS.back} className="text-2xl" />
 						</button>
 					) : (
 						<button
@@ -52,7 +49,7 @@ export function AppHeader({
 							type="button"
 							aria-label="Menu"
 						>
-							<IonIcon icon={menuOutline} className="text-2xl" />
+							<IonIcon icon={ICONS.menu} className="text-[20px]" />
 						</button>
 					)}
 
@@ -72,23 +69,22 @@ export function AppHeader({
 
 					<div className="flex items-center gap-1.5">
 						<button
-							className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-1.5 text-[13px] font-semibold text-ink"
+							className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2 py-1 text-[11px] font-medium text-ink"
 							type="button"
 						>
 							<IonIcon
-								icon={globeOutline}
-								className="text-[15px] text-muted-light"
+								icon={ICONS.language}
+								className="text-[13px] text-muted-light"
 							/>
 							English
-							<IonIcon icon={chevronDownOutline} className="text-xs" />
+							<IonIcon icon={ICONS.chevronDown} className="text-[10px]" />
 						</button>
 						<button
-							className="relative cursor-pointer border-none bg-transparent p-1.5 leading-none text-ink"
+							className="cursor-pointer border-none bg-transparent p-1 leading-none text-ink"
 							type="button"
 							aria-label="Notifications"
 						>
-							<IonIcon icon={notificationsOutline} className="text-2xl" />
-							<span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full border-[1.5px] border-white bg-primary" />
+							<IonIcon icon={ICONS.notifications} className="text-xl" />
 						</button>
 					</div>
 				</div>

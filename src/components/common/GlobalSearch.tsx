@@ -1,10 +1,4 @@
 import { IonIcon, useIonRouter } from "@ionic/react";
-import {
-	documentTextOutline,
-	locationOutline,
-	personOutline,
-	search as searchIcon,
-} from "ionicons/icons";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { professionalHref, ROUTES } from "@/constants/routes";
@@ -13,6 +7,7 @@ import {
 	type GlobalSearchResult,
 	SEARCH_MIN_TERM,
 } from "@/lib/api/search";
+import { ICONS } from "@/theme/icons";
 
 type Scope = "professionals" | "leads";
 
@@ -125,17 +120,16 @@ export function GlobalSearch() {
 					event.preventDefault();
 					viewAll();
 				}}
-				className="flex items-center gap-2.5 rounded-[14px] border border-line bg-white px-3.5 py-3 shadow-card-sm"
+				className="flex items-center gap-2 rounded-[10px] border border-line bg-white px-2 py-2 shadow-card-sm"
 			>
-				<IonIcon
-					icon={searchIcon}
-					className="shrink-0 text-lg text-muted-light"
-				/>
+				<span className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] bg-surface-muted">
+					<IonIcon icon={ICONS.search} className="text-xl text-muted-light" />
+				</span>
 				<input
-					className="min-w-0 flex-1 border-none bg-transparent font-sans text-sm text-ink outline-none placeholder:text-muted-light"
+					className="min-w-0 flex-1 border-none bg-transparent font-sans text-sm font-semibold text-ink outline-none placeholder:font-semibold placeholder:text-muted-light/70"
 					type="search"
 					value={term}
-					placeholder="Search professionals, leads…"
+					placeholder="Describe what you need"
 					aria-label="Search"
 					onChange={(event) => {
 						setTerm(event.target.value);
@@ -180,7 +174,7 @@ export function GlobalSearch() {
 											className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-muted"
 										>
 											<span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary-light text-primary">
-												<IonIcon icon={personOutline} />
+												<IonIcon icon={ICONS.professional} />
 											</span>
 											<span className="min-w-0">
 												<span className="block truncate text-sm font-semibold text-ink">
@@ -210,7 +204,7 @@ export function GlobalSearch() {
 											className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-muted"
 										>
 											<span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary-light text-primary">
-												<IonIcon icon={documentTextOutline} />
+												<IonIcon icon={ICONS.lead} />
 											</span>
 											<span className="min-w-0">
 												<span className="block truncate text-sm font-semibold text-ink">
@@ -219,7 +213,7 @@ export function GlobalSearch() {
 												{l.location ? (
 													<span className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-light">
 														<IonIcon
-															icon={locationOutline}
+															icon={ICONS.location}
 															className="shrink-0"
 														/>
 														<span className="truncate">

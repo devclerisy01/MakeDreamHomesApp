@@ -20,8 +20,8 @@
 	--ion-tab-bar-background: #ffffff;
 
 	--ion-font-family:
-		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-		sans-serif;
+		"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+		Helvetica, Arial, sans-serif;
 
 	/* App custom tokens */
 	--mdh-primary: #26428b;

@@ -218,19 +218,19 @@ export function SignupPanel({
 				/>
 			) : (
 				<>
-					<h1 className="text-[26px] font-bold leading-tight text-ink">
+					<h1 className="text-[20px] font-bold leading-tight text-ink">
 						Create an Account
 					</h1>
-					<p className="mt-2 text-sm leading-relaxed text-muted-light">
+					<p className="mt-2 text-[12px] leading-[18px] text-muted">
 						Tell us what you need — post your requirement
 					</p>
 
-					<form onSubmit={submitForm} className="mt-5 flex flex-col gap-4">
+					<form onSubmit={submitForm} className="mt-5 flex flex-col gap-3.5">
 						{/* Account-type pill selector (User / Professional / …). */}
 						<div
 							role="radiogroup"
 							aria-label="Account type"
-							className="flex w-full items-center justify-between rounded-full border border-line bg-white p-1"
+							className="flex w-full items-center justify-between rounded-full border border-primary bg-white p-1"
 						>
 							{ROLES.map((option) => {
 								const selected = option.id === role;
@@ -244,8 +244,8 @@ export function SignupPanel({
 											setRole(option.id);
 											setCategoriesError(null);
 										}}
-										className={`whitespace-nowrap rounded-full px-2 py-2 text-[10.5px] font-semibold transition-colors ${
-											selected ? "bg-primary text-white" : "text-muted"
+										className={`whitespace-nowrap rounded-full px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${
+											selected ? "bg-primary text-white" : "text-ink"
 										}`}
 									>
 										{option.label}
@@ -339,23 +339,20 @@ export function SignupPanel({
 								className="flex items-start gap-2.5 text-left"
 							>
 								<span
-									className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${
+									className={`mt-px grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border ${
 										acceptedTerms
 											? "border-primary bg-primary text-white"
-											: "border-line bg-white"
+											: "border-[#dae3ef] bg-white"
 									}`}
 								>
 									{acceptedTerms ? (
-										<IonIcon icon={checkmarkOutline} className="text-sm" />
+										<IonIcon icon={checkmarkOutline} className="text-[11px]" />
 									) : null}
 								</span>
-								<span className="text-[13px] leading-snug text-muted">
+								<span className="text-[11px] leading-[16px] text-ink">
 									I agree to the{" "}
-									<span className="font-bold text-ink">
-										Terms &amp; Conditions
-									</span>{" "}
-									and <span className="font-bold text-ink">Privacy Policy</span>
-									.
+									<span className="font-bold">Terms &amp; Conditions</span> and{" "}
+									<span className="font-bold">Privacy Policy</span>.
 								</span>
 							</button>
 							{termsError ? (
@@ -366,20 +363,20 @@ export function SignupPanel({
 						<button
 							type="submit"
 							disabled={busy}
-							className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[15px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
+							className="mt-1 flex h-[47px] w-full items-center justify-center gap-2 rounded-[8px] bg-primary text-[14px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
 						>
 							{busy ? (
 								<IonSpinner name="crescent" className="h-5 w-5" />
 							) : (
 								<>
 									Continue
-									<IonIcon icon={arrowForward} className="text-lg" />
+									<IonIcon icon={arrowForward} className="text-base" />
 								</>
 							)}
 						</button>
 					</form>
 
-					<p className="mt-5 text-center text-sm text-muted">
+					<p className="mt-5 text-center text-[12px] text-muted">
 						Already have an account?{" "}
 						<button
 							type="button"

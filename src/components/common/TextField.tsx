@@ -12,7 +12,7 @@ interface TextFieldProps {
 }
 
 const FIELD =
-	"w-full rounded-xl border bg-white px-3.5 py-3 font-sans text-base text-ink outline-none transition-colors placeholder:text-muted-light focus:border-primary disabled:opacity-60";
+	"w-full rounded-[9px] border bg-white px-3.5 py-3 font-sans text-[14px] text-ink outline-none transition-colors placeholder:font-medium placeholder:text-[#c4c7cc] focus:border-primary disabled:opacity-60";
 
 /** Styled text input / textarea matching the auth form fields. */
 export function TextField({
@@ -26,7 +26,7 @@ export function TextField({
 	disabled,
 	error,
 }: TextFieldProps) {
-	const border = error ? "border-danger" : "border-line";
+	const border = error ? "border-danger" : "border-[#dae3ef]";
 	return (
 		<div>
 			{multiline ? (

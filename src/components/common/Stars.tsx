@@ -1,4 +1,7 @@
 import { IonIcon } from "@ionic/react";
+
+// Ionicons full/half/empty stars: this multi-state row must tint via `text-star`
+// (the single-state gold custom star is used on cards via ICONS.star instead).
 import { star, starHalf, starOutline } from "ionicons/icons";
 
 interface StarsProps {

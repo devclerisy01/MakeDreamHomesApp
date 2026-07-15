@@ -23,16 +23,17 @@ export function PhoneField({
 	return (
 		<div>
 			<div
-				className={`flex items-center gap-2 rounded-2xl border bg-white p-2 shadow-card-sm ${
-					error ? "border-danger" : "border-line"
+				className={`flex h-[49px] items-center gap-3 rounded-[9px] border bg-white pl-3.5 pr-3 ${
+					error ? "border-danger" : "border-[#dae3ef]"
 				}`}
 			>
-				<span className="flex select-none items-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-[15px] font-bold text-ink">
-					<span aria-hidden className="text-base leading-none">
+				<span className="flex select-none items-center gap-1.5 text-[13px] font-semibold text-ink">
+					<span aria-hidden className="text-[15px] leading-none">
 						🇮🇳
 					</span>
 					+91
 				</span>
+				<span aria-hidden className="h-[24px] w-px shrink-0 bg-[#dae3ef]" />
 				<input
 					id="login-phone"
 					type="tel"
@@ -47,7 +48,7 @@ export function PhoneField({
 							event.target.value.replace(/\D/g, "").slice(0, PHONE_DIGITS),
 						)
 					}
-					className="min-w-0 flex-1 border-none bg-transparent px-1 font-sans text-base text-ink outline-none placeholder:text-muted-light disabled:opacity-60"
+					className="min-w-0 flex-1 border-none bg-transparent font-sans text-[14px] text-ink outline-none placeholder:font-medium placeholder:text-[#c4c7cc] disabled:opacity-60"
 				/>
 			</div>
 			{error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
