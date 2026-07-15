@@ -41,7 +41,7 @@ Replicate, on mobile, the four designed screens using the **same backend APIs** 
   - ⚠️ On a real device, `localhost` = the device. Set `VITE_API_URL` to the LAN IP or deployed URL for device testing.
 - **Response envelope:** `{ success, message, data, errors }`; pagination in `meta` (`meta.total`, `meta.totalPages`, `meta.counts`). Mirrors web `lib/api/client.ts`.
 - **Auth:** Bearer token from storage on `auth:true` calls; on 401 refresh once via `POST /app/auth/refresh`, then retry. Token store = Capacitor Preferences (falls back to `localStorage` on web).
-- **Image resolution:** `assetUrl(key)` — absolute URLs pass through; relative keys get `VITE_STORAGE_PUBLIC_URL` (default `http://localhost:8080/`) prefixed. Card avatars + portfolio thumbnails use it; the **detail header image is already absolute** (use raw, per web `profile-header.tsx:23`).
+- **Image resolution:** `assetUrl(value)` — passes through already-loadable values (`http(s):`, `blob:`, `data:`, app-relative `/…`) and returns `null` otherwise. The API resolves storage keys to absolute URLs server-side (presigned GET for profile/portfolio, public URL for leads), so the app never prefixes keys itself.
 - **Geo context:** optional `lat`/`lng`/`radius` read from stored location (P1: may be empty → omitted from queries).
 
 ### 2.2 Navigation — `IonTabs`

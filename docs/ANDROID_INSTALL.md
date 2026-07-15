@@ -147,8 +147,10 @@ machine's **LAN IP** in `.env.local`:
 
 ```
 VITE_API_URL=http://192.168.1.46:8080/api/v1
-VITE_STORAGE_PUBLIC_URL=http://192.168.1.46:8080/
 ```
+
+Images don't need any extra config: the API resolves storage keys to absolute
+URLs (presigned/public) server-side, so the app loads them directly.
 
 For the app to work on the phone:
 

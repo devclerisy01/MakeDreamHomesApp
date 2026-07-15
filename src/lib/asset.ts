@@ -1,16 +1,14 @@
-import { STORAGE_PUBLIC_URL } from "@/config/api";
-
 /**
- * Resolves a stored media path to an absolute URL. Absolute URLs
- * (`http(s)://…`) pass through unchanged; relative keys are prefixed with the
- * public storage origin. Returns `null` for an empty/absent value.
+ * Resolves a stored media value to a loadable URL. The API resolves storage
+ * keys to absolute URLs server-side (presigned GET for profile/portfolio,
+ * public URL for leads), so values arriving here are already loadable and pass
+ * through unchanged: remote (`http(s):`), object-URL previews (`blob:`), inline
+ * data URIs (`data:`) and app-relative bundled assets (`/…`). Returns `null` for
+ * an empty value or a bare, unresolved storage key (nothing to load).
  */
 export function assetUrl(path?: string | null): string | null {
 	if (!path) return null;
-	// Already-loadable URLs pass through: remote (http/https), local object-URL
-	// previews (blob:) and inline data URIs (data:).
-	if (/^(https?:|blob:|data:)/i.test(path)) return path;
-	// App-relative paths (bundled/public assets) as-is.
-	if (path.startsWith("/")) return path;
-	return `${STORAGE_PUBLIC_URL}${path}`;
+	if (/^(https?:|blob:|data:|\/)/i.test(path)) return path;
+	// Not a loadable URL — a bare storage key the API didn't resolve.
+	return null;
 }

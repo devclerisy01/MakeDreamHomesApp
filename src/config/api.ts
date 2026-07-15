@@ -10,9 +10,5 @@ export const API_BASE_URL = (
 	import.meta.env.VITE_API_URL ?? "http://localhost:8080/api/v1"
 ).replace(/\/+$/, "");
 
-/** Public storage origin used by {@link assetUrl} to resolve relative keys. */
-export const STORAGE_PUBLIC_URL =
-	import.meta.env.VITE_STORAGE_PUBLIC_URL ?? "http://localhost:8080/";
-
 /** Items requested per listing page (directory + leads). */
 export const LISTING_PAGE_SIZE = 10;
