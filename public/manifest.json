@@ -1,14 +1,24 @@
 {
-  "short_name": "Ionic App",
-  "name": "My Ionic App",
+  "short_name": "MakeDreamHomes",
+  "name": "MakeDreamHomes",
   "icons": [
     {
-      "src": "assets/icon/favicon.png",
+      "src": "favicon.png",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "type": "image/png"
     },
     {
-      "src": "assets/icon/icon.png",
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
@@ -16,6 +26,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#ffffff",
+  "theme_color": "#26428B",
   "background_color": "#ffffff"
 }
