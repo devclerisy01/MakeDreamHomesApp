@@ -5,28 +5,7 @@ export const ROUTES = {
 	requirement: "/requirement",
 	professionals: "/professionals",
 	profile: "/profile",
-	register: "/register",
 } as const;
-
-interface AuthLinkOptions {
-	/** Pre-fill the phone the user just typed (carried into signup). */
-	phone?: string;
-	/** Where to land after auth succeeds. */
-	returnTo?: string;
-}
-
-function authQuery({ phone, returnTo }: AuthLinkOptions): string {
-	const params = new URLSearchParams();
-	if (phone) params.set("phone", phone);
-	if (returnTo) params.set("returnTo", returnTo);
-	const qs = params.toString();
-	return qs ? `?${qs}` : "";
-}
-
-/** Signup path, optionally carrying a pre-filled phone and a post-auth return path. */
-export function registerHref(opts: AuthLinkOptions = {}): string {
-	return `${ROUTES.register}${authQuery(opts)}`;
-}
 
 /**
  * URL-safe base64 for the detail-page slug — matches the web app so the same

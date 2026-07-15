@@ -14,9 +14,8 @@ import {
 	logInOutline,
 	personCircleOutline,
 } from "ionicons/icons";
-import { Redirect, Route, useLocation } from "react-router-dom";
+import { Redirect, Route } from "react-router-dom";
 
-import { ROUTES } from "@/constants/routes";
 import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
 import Home from "@/pages/Home";
@@ -25,26 +24,19 @@ import ProfessionalDetail from "@/pages/ProfessionalDetail";
 import Professionals from "@/pages/Professionals";
 import Profile from "@/pages/Profile";
 import Requirement from "@/pages/Requirement";
-import Signup from "@/pages/Signup";
 
 /**
- * App shell: five tabs plus the full-screen signup route. The tab bar is hidden
- * on `/register` so signup fills the viewport; sign-in is an in-place popup (see
- * the "Login" tab → `openLogin`), so there's no login route. Rendered inside
- * `IonReactRouter`, so `useLocation` is available here.
+ * App shell: five tabs over the routed pages. Sign-in and sign-up are both
+ * in-place popups (the "Login" tab → `openLogin`; the popups swap between each
+ * other), so there are no auth routes.
  */
 export function TabsShell() {
-	const { pathname } = useLocation();
 	const { isAuthed } = useAuth();
 	const { openLogin } = useLogin();
-	const hideTabBar = pathname === ROUTES.register;
 
 	return (
 		<IonTabs>
 			<IonRouterOutlet>
-				<Route exact path="/register">
-					<Signup />
-				</Route>
 				<Route exact path="/home">
 					<Home />
 				</Route>
@@ -68,12 +60,7 @@ export function TabsShell() {
 				</Route>
 			</IonRouterOutlet>
 
-			<IonTabBar
-				slot="bottom"
-				className={
-					hideTabBar ? "mdh-tab-bar mdh-tab-bar--hidden" : "mdh-tab-bar"
-				}
-			>
+			<IonTabBar slot="bottom" className="mdh-tab-bar">
 				<IonTabButton tab="home" href="/home">
 					<IonIcon icon={homeOutline} />
 					<IonLabel>Home</IonLabel>
