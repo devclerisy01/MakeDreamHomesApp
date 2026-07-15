@@ -29,3 +29,6 @@ yarn-error.log*
 
 # Optional eslint cache
 .eslintcache
+
+# Local machine config (LAN IP etc.) — do not commit
+.env
