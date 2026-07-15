@@ -31,6 +31,18 @@
 	--border-width: 0;
 	--min-height: 54px;
 }
+/* Flat header: drop Ionic's default drop-shadow/hairline so the toolbar blends
+   seamlessly into the page (matches the design). */
+.mdh-header {
+	box-shadow: none;
+}
+.mdh-header::after {
+	display: none;
+}
+/* Home: blend the toolbar into the page's light-blue gradient top. */
+.mdh-header--tint ion-toolbar {
+	--background: #e8f3fc;
+}
 
 /* ---- Skeleton shimmer -------------------------------------------------- */
 .mdh-shimmer {

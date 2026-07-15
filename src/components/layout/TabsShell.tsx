@@ -6,15 +6,9 @@ import {
 	IonTabButton,
 	IonTabs,
 } from "@ionic/react";
-import {
-	addCircleOutline,
-	constructOutline,
-	documentTextOutline,
-	homeOutline,
-	logInOutline,
-	personCircleOutline,
-} from "ionicons/icons";
 import { Redirect, Route } from "react-router-dom";
+
+import { ICONS } from "@/theme/icons";
 
 import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
@@ -62,24 +56,24 @@ export function TabsShell() {
 
 			<IonTabBar slot="bottom" className="mdh-tab-bar">
 				<IonTabButton tab="home" href="/home">
-					<IonIcon icon={homeOutline} />
+					<IonIcon icon={ICONS.tabHome} />
 					<IonLabel>Home</IonLabel>
 				</IonTabButton>
 				<IonTabButton tab="leads" href="/leads">
-					<IonIcon icon={documentTextOutline} />
+					<IonIcon icon={ICONS.tabLeads} />
 					<IonLabel>Leads</IonLabel>
 				</IonTabButton>
 				<IonTabButton tab="requirement" href="/requirement">
-					<IonIcon icon={addCircleOutline} />
+					<IonIcon icon={ICONS.tabRequirement} />
 					<IonLabel>Requirement</IonLabel>
 				</IonTabButton>
 				<IonTabButton tab="professionals" href="/professionals">
-					<IonIcon icon={constructOutline} />
+					<IonIcon icon={ICONS.tabProfessionals} />
 					<IonLabel>Professionals</IonLabel>
 				</IonTabButton>
 				{isAuthed ? (
 					<IonTabButton tab="profile" href="/profile">
-						<IonIcon icon={personCircleOutline} />
+						<IonIcon icon={ICONS.tabProfile} />
 						<IonLabel>Profile</IonLabel>
 					</IonTabButton>
 				) : (
@@ -88,7 +82,7 @@ export function TabsShell() {
 						onClick={() => openLogin()}
 						// No `href`: sign-in is an in-place popup, not a route.
 					>
-						<IonIcon icon={logInOutline} />
+						<IonIcon icon={ICONS.tabLogin} />
 						<IonLabel>Login</IonLabel>
 					</IonTabButton>
 				)}

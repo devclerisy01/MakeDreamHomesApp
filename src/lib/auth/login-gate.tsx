@@ -8,7 +8,6 @@ import {
 	useState,
 } from "react";
 
-import { LoginArt } from "@/components/auth/LoginArt";
 import { LoginPanel } from "@/components/auth/LoginModal";
 import { SignupPanel } from "@/components/auth/SignupModal";
 import { isLoggedIn } from "@/lib/auth/session";
@@ -100,11 +99,22 @@ export function LoginGateProvider({ children }: { children: ReactNode }) {
 				<IonContent
 					style={{
 						"--background":
-							"linear-gradient(180deg,#eaf0fc 0%,#f4f7fd 42%,#eaf0fc 100%)",
+							"linear-gradient(180deg,#e8f3fc 0%,#f6f7fb 45%,#f6f7fb 100%)",
 					}}
 				>
-					{/* Decorative house/pin scene anchored to the bottom (matches design). */}
-					<LoginArt className="pointer-events-none absolute inset-x-0 bottom-0 z-0 w-full" />
+					{/* Decorative house/pin scene anchored to the bottom (matches design):
+					   the exported artwork, rendered faintly and faded into the page. */}
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[190px] overflow-hidden"
+					>
+						<img
+							src="/auth-scene.png"
+							alt=""
+							className="absolute bottom-0 left-0 w-full opacity-[0.45]"
+						/>
+						<div className="absolute inset-0 bg-gradient-to-b from-[#f2f7fe] via-[#f2f7fe]/50 to-transparent" />
+					</div>
 
 					<div className="relative z-10 mx-auto flex min-h-full w-full max-w-[460px] flex-col px-6 pb-[210px] pt-[calc(env(safe-area-inset-top)+1rem)]">
 						{state.mode === "signup" ? (

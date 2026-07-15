@@ -4,6 +4,14 @@ import { IonReactRouter } from "@ionic/react-router";
 import { TabsShell } from "@/components/layout/TabsShell";
 import { LoginGateProvider } from "@/lib/auth/login-gate";
 
+/* Self-hosted Plus Jakarta Sans (weights the app uses: 400/500/600/700/800).
+   Bundled by Vite so it works offline in the Capacitor WebView — no CDN. */
+import "@fontsource/plus-jakarta-sans/400.css";
+import "@fontsource/plus-jakarta-sans/500.css";
+import "@fontsource/plus-jakarta-sans/600.css";
+import "@fontsource/plus-jakarta-sans/700.css";
+import "@fontsource/plus-jakarta-sans/800.css";
+
 /* Tailwind first: it declares the cascade-layer order (incl. `ionic`). */
 import "@/theme/tailwind.css";
 

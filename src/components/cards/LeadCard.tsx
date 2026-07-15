@@ -1,11 +1,4 @@
 import { IonIcon } from "@ionic/react";
-import {
-	cubeOutline,
-	homeOutline,
-	locationOutline,
-	people,
-	walletOutline,
-} from "ionicons/icons";
 import { useState } from "react";
 
 import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
@@ -13,24 +6,31 @@ import { SaveButton } from "@/components/common/SaveButton";
 import { useClampOverflow } from "@/hooks/useClampOverflow";
 import { leadBaseCategory, leadIntent } from "@/lib/api/leads";
 import { formatBudget, timeAgo } from "@/lib/format";
-import { CARD, META, TAG_MUTED } from "@/lib/ui";
+import { CARD } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
 import type { Lead, LeadCategoryId } from "@/types";
 
 const CATEGORY_ICON: Record<LeadCategoryId, string> = {
-	property: homeOutline,
-	material: cubeOutline,
-	professional: people,
+	property: ICONS.categoryProperty,
+	material: ICONS.categoryMaterial,
+	professional: ICONS.categoryProfessional,
 };
 
 export function LeadCard({
 	lead,
 	onSaveToggle,
 	owned = false,
+	showSave = true,
+	showReadMore = true,
 }: {
 	lead: Lead;
 	onSaveToggle?: (saved: boolean) => void;
 	/** The signed-in user's own lead — hides the save heart. */
 	owned?: boolean;
+	/** Hide the save heart (e.g. the Home feed, which matches the clean design). */
+	showSave?: boolean;
+	/** Hide the "Read more" affordance (Home feed shows a static card). */
+	showReadMore?: boolean;
 }) {
 	const intent = leadIntent(lead.category);
 	const icon = CATEGORY_ICON[leadBaseCategory(lead.category)];
@@ -54,30 +54,22 @@ export function LeadCard({
 		overflows || hasFullerDescription || (lead.images?.length ?? 0) > 0;
 
 	return (
-		<div className={`p-3.5 ${CARD}`}>
+		<div className={`p-3 ${CARD}`}>
 			<div className="flex gap-3">
-				<div className="relative grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-line bg-surface-muted">
-					<IonIcon icon={icon} className="text-2xl text-primary" />
-					{intent ? (
-						<span
-							className={`absolute -bottom-1.5 left-1 rounded-[5px] px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-white ${
-								intent === "buy" ? "bg-primary" : "bg-sky-500"
-							}`}
-						>
-							{intent.toUpperCase()}
-						</span>
-					) : null}
+				<div className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-md bg-[#f2f4f7]">
+					{/* Figma: 21×21, #14181F */}
+					<IonIcon icon={icon} className="text-[21px] text-[#14181f]" />
 				</div>
 
 				<div className="min-w-0 flex-1">
 					<div className="flex items-start justify-between gap-2">
 						<h3
 							ref={headingRef}
-							className="m-0 line-clamp-2 text-[15px] font-bold leading-snug text-ink"
+							className="m-0 line-clamp-2 text-[12px] font-bold leading-snug text-ink"
 						>
 							{title}
 						</h3>
-						{owned ? null : (
+						{owned || !showSave ? null : (
 							<SaveButton
 								entityType="leads"
 								entityId={lead.id}
@@ -85,7 +77,7 @@ export function LeadCard({
 							/>
 						)}
 					</div>
-					{hasMore ? (
+					{showReadMore && hasMore ? (
 						<button
 							type="button"
 							onClick={() => setDetailsOpen(true)}
@@ -95,13 +87,22 @@ export function LeadCard({
 						</button>
 					) : null}
 					<div className="mt-2 flex flex-wrap items-center gap-1.5">
+						{intent ? (
+							<span className="inline-flex items-center rounded-[4px] border border-primary bg-[#e8f1ff] px-1.5 py-1 text-[9px] font-semibold uppercase leading-none tracking-wide text-primary">
+								{intent}
+							</span>
+						) : null}
+						{/* Figma: Medium 8px, #6F7791, bg #F1F4FC, border #D7DDED, radius 4 */}
 						{tags.map((tag) => (
-							<span key={tag} className={TAG_MUTED}>
+							<span
+								key={tag}
+								className="inline-flex items-center whitespace-nowrap rounded-[4px] border border-[#d7dded] bg-[#f1f4fc] px-[7px] py-1 text-[8px] font-medium capitalize leading-none text-[#6f7791]"
+							>
 								{tag}
 							</span>
 						))}
 						{posted ? (
-							<span className="ml-auto whitespace-nowrap text-xs text-muted-light">
+							<span className="ml-auto whitespace-nowrap text-[10px] text-[#868686]">
 								{posted}
 							</span>
 						) : null}
@@ -109,22 +110,24 @@ export function LeadCard({
 				</div>
 			</div>
 
-			<div className="mt-3 flex items-center justify-between gap-2.5 border-t border-line pt-3">
+			<div className="mt-2.5 flex items-center justify-between gap-2.5 border-t border-line pt-2.5">
+				{/* Figma: Regular 10px, #6F7791 */}
 				{lead.location ? (
-					<span className={META}>
-						<IonIcon icon={locationOutline} className="shrink-0 text-[15px]" />
+					<span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-[#6f7791]">
+						<IonIcon icon={ICONS.location} className="shrink-0 text-[12px]" />
 						<span className="truncate">{lead.location}</span>
 					</span>
 				) : (
 					<span />
 				)}
+				{/* Figma: 10px */}
 				{budget ? (
-					<span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-ink">
+					<span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[10px] text-ink">
 						<IonIcon
-							icon={walletOutline}
-							className="text-[15px] text-muted-light"
+							icon={ICONS.budget}
+							className="text-[12px] text-muted-light"
 						/>
-						Est. Price: {budget}
+						Est. Price: <span className="font-bold">{budget}</span>
 					</span>
 				) : null}
 			</div>

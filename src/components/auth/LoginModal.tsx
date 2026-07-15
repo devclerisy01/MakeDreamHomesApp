@@ -143,15 +143,15 @@ export function LoginPanel({
 				/>
 			) : (
 				<>
-					<h1 className="text-[26px] font-bold leading-tight text-ink">
+					<h1 className="text-[20px] font-bold leading-tight text-ink">
 						Login
 					</h1>
-					<p className="mt-2 max-w-[340px] text-sm leading-relaxed text-muted-light">
+					<p className="mt-2 max-w-[340px] text-[12px] leading-[18px] text-muted">
 						Sign in to access your leads, requirements, saved properties, and
 						professional network.
 					</p>
 
-					<form onSubmit={submitPhone} className="mt-7">
+					<form onSubmit={submitPhone} className="mt-6">
 						<PhoneField
 							value={phone}
 							onChange={(digits) => {
@@ -165,24 +165,24 @@ export function LoginPanel({
 						<button
 							type="submit"
 							disabled={busy}
-							className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[15px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
+							className="mt-4 flex h-[47px] w-full items-center justify-center gap-2 rounded-[8px] bg-primary text-[14px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
 						>
 							{busy ? (
 								<IonSpinner name="crescent" className="h-5 w-5" />
 							) : (
 								<>
 									Continue
-									<IonIcon icon={arrowForward} className="text-lg" />
+									<IonIcon icon={arrowForward} className="text-base" />
 								</>
 							)}
 						</button>
 					</form>
 
-					<p className="mt-5 text-center text-sm text-muted">
+					<p className="mt-5 text-center text-[12px] text-muted">
 						Don&apos;t have an account?{" "}
 						<button
 							type="button"
-							className="font-bold text-primary"
+							className="font-semibold text-primary"
 							onClick={() => onSwitchToSignup(phone)}
 						>
 							Sign up now
