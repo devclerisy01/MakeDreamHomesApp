@@ -18,6 +18,8 @@ export const UI_MESSAGES = {
 
 	// capability / device
 	voiceUnavailable: "Voice input isn't available on this device.",
+	voiceDenied: "Microphone permission denied. Please type your requirement.",
+	voiceFailed: "Couldn't capture your voice. Please try again.",
 	locationUnavailable: "Location isn't available on this device.",
 	locationFailed: "Couldn't determine your location. Enter it manually.",
 	locationDenied: "Location permission denied. Please enter it manually.",

@@ -7,6 +7,7 @@ import {
 	type GeoQuery,
 	nearestCity,
 } from "@/lib/geo/geo";
+import { getCurrentCoordsIfGranted } from "@/lib/native/geolocation";
 
 /**
  * Persisted "selected location" store for the header city filter. Mirrors the
@@ -129,16 +130,11 @@ export function locationFromCity(city: CityOption): SelectedLocation | null {
 	};
 }
 
-const GEO_OPTIONS: PositionOptions = {
-	enableHighAccuracy: false,
-	maximumAge: 600_000,
-	timeout: 8_000,
-};
-
 /**
- * One-time bootstrap: if nothing is stored yet, try the device location and pick
- * the nearest verified city; fall back to DEFAULT_CITY. Idempotent — no-op when a
- * location already exists. Call once at the app root.
+ * One-time bootstrap: if nothing is stored yet, pick the nearest verified city
+ * from the device location — but ONLY if location permission is already granted
+ * (never prompts at launch); otherwise fall back to DEFAULT_CITY. The user can
+ * grant location later via the header's "use my current location". Idempotent.
  */
 export async function ensureLocationInitialized(): Promise<void> {
 	if (getLocation()) return;
@@ -152,29 +148,14 @@ export async function ensureLocationInitialized(): Promise<void> {
 		if (loc && !getLocation()) setLocation(loc);
 	};
 
-	if (typeof navigator === "undefined" || !navigator.geolocation) {
+	// Silent read — won't pop a permission dialog on first launch.
+	const result = await getCurrentCoordsIfGranted();
+	if (result.ok) {
+		const near = nearestCity(cities, result.latitude, result.longitude);
+		const loc = near ? locationFromCity(near) : null;
+		if (loc && !getLocation()) setLocation(loc);
+		else fallback();
+	} else {
 		fallback();
-		return;
 	}
-
-	await new Promise<void>((resolve) => {
-		navigator.geolocation.getCurrentPosition(
-			(pos) => {
-				const near = nearestCity(
-					cities,
-					pos.coords.latitude,
-					pos.coords.longitude,
-				);
-				const loc = near ? locationFromCity(near) : null;
-				if (loc && !getLocation()) setLocation(loc);
-				else fallback();
-				resolve();
-			},
-			() => {
-				fallback();
-				resolve();
-			},
-			GEO_OPTIONS,
-		);
-	});
 }

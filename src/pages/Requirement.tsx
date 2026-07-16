@@ -35,6 +35,11 @@ import {
 } from "@/lib/api/misc";
 import type { AddressResult } from "@/lib/api/places";
 import { toastError, toastInfo } from "@/lib/api/toast";
+import {
+	isNativeSpeech,
+	startNativeSpeech,
+	stopNativeSpeech,
+} from "@/lib/native/speech";
 import { useLogin } from "@/lib/auth/login-gate";
 import { storeSession, useAuth } from "@/lib/auth/session";
 import { CARD } from "@/lib/ui";
@@ -151,6 +156,9 @@ export default function Requirement() {
 	const [submitting, setSubmitting] = useState(false);
 	const [listening, setListening] = useState(false);
 	const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+	// Description text captured when dictation starts, so streamed transcripts
+	// append to what the user already had instead of overwriting it.
+	const speechBaseRef = useRef("");
 	const attachmentsRef = useRef<Attachment[]>([]);
 	attachmentsRef.current = attachments;
 
@@ -180,6 +188,7 @@ export default function Requirement() {
 		return () => {
 			controller.abort();
 			recognitionRef.current?.stop();
+			void stopNativeSpeech();
 			for (const item of attachmentsRef.current) URL.revokeObjectURL(item.url);
 		};
 	}, []);
@@ -255,14 +264,48 @@ export default function Requirement() {
 		setFileError(null);
 	}
 
-	function toggleSpeech() {
+	// Apply a (partial or final) transcript on top of the pre-dictation text.
+	function applyTranscript(transcript: string) {
+		const base = speechBaseRef.current;
+		setDescription(base ? `${base} ${transcript}` : transcript);
+		if (descriptionError) setDescriptionError(null);
+	}
+
+	async function toggleSpeech() {
+		if (listening) {
+			if (isNativeSpeech()) void stopNativeSpeech();
+			else recognitionRef.current?.stop();
+			setListening(false);
+			return;
+		}
+
+		// Snapshot the current text so streamed results append, not overwrite.
+		speechBaseRef.current = description.trim();
+
+		// Native (real device): the WebView lacks Web Speech, so use the platform
+		// recognizer — it prompts for the mic permission and reports denial.
+		if (isNativeSpeech()) {
+			setListening(true);
+			const res = await startNativeSpeech({
+				language: "en-IN",
+				onPartial: applyTranscript,
+				onEnd: () => setListening(false),
+			});
+			if (!res.ok) {
+				setListening(false);
+				toastInfo(
+					res.reason === "denied"
+						? UI_MESSAGES.voiceDenied
+						: UI_MESSAGES.voiceUnavailable,
+				);
+			}
+			return;
+		}
+
+		// Web fallback (desktop browser / dev): Web Speech API.
 		const SpeechRecognition = getSpeechRecognition();
 		if (!SpeechRecognition) {
 			toastInfo(UI_MESSAGES.voiceUnavailable);
-			return;
-		}
-		if (listening) {
-			recognitionRef.current?.stop();
 			return;
 		}
 		const recognition = new SpeechRecognition();
@@ -274,10 +317,7 @@ export default function Requirement() {
 				.map((result) => result[0]?.transcript ?? "")
 				.join(" ")
 				.trim();
-			if (transcript) {
-				setDescription((prev) => (prev ? `${prev} ${transcript}` : transcript));
-				if (descriptionError) setDescriptionError(null);
-			}
+			if (transcript) applyTranscript(transcript);
 		};
 		recognition.onend = () => setListening(false);
 		recognition.onerror = () => setListening(false);
@@ -892,7 +932,7 @@ export default function Requirement() {
 							/>
 							<button
 								type="button"
-								onClick={toggleSpeech}
+								onClick={() => void toggleSpeech()}
 								className={`absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-[52px] px-3 py-1.5 text-[11px] font-bold ${
 									listening
 										? "bg-primary text-white"
