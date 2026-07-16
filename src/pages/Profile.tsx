@@ -9,11 +9,9 @@ import {
 } from "@ionic/react";
 import {
 	addOutline,
-	chevronForwardOutline,
 	createOutline,
 	heartOutline,
 	locationOutline,
-	logOutOutline,
 	personCircleOutline,
 	personOutline,
 	shareSocialOutline,
@@ -46,7 +44,7 @@ import {
 import { getProfessionalDetail } from "@/lib/api/professionals";
 import { toastInfo } from "@/lib/api/toast";
 import { useLogin } from "@/lib/auth/login-gate";
-import { clearSession, setStoredUser, useAuth } from "@/lib/auth/session";
+import { setStoredUser, useAuth } from "@/lib/auth/session";
 import { CARD, SECTION_HEAD, SECTION_TITLE, TAG_PRIMARY } from "@/lib/ui";
 import type { Lead, ProfessionalDetail } from "@/types";
 
@@ -507,25 +505,6 @@ export default function Profile() {
 									count={detail.reviewsCount}
 								/>
 							) : null}
-
-							{/* ---- Sign out ---- */}
-							<button
-								type="button"
-								onClick={() => {
-									clearSession();
-									router.push(ROUTES.home, "root", "replace");
-								}}
-								className={`flex w-full items-center gap-3 px-4 py-3.5 text-left ${CARD}`}
-							>
-								<IonIcon icon={logOutOutline} className="text-xl text-danger" />
-								<span className="flex-1 text-sm font-bold text-danger">
-									Sign out
-								</span>
-								<IonIcon
-									icon={chevronForwardOutline}
-									className="text-muted-light"
-								/>
-							</button>
 						</div>
 					)}
 				</Container>

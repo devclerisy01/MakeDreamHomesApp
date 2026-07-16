@@ -2,6 +2,7 @@ import { IonApp, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { useEffect } from "react";
 
+import { SideMenu } from "@/components/layout/SideMenu";
 import { TabsShell } from "@/components/layout/TabsShell";
 import { LoginGateProvider } from "@/lib/auth/login-gate";
 import { ensureLocationInitialized } from "@/lib/geo/location-store";
@@ -37,6 +38,7 @@ const App: React.FC = () => {
 		<IonApp>
 			<IonReactRouter>
 				<LoginGateProvider>
+					<SideMenu />
 					<TabsShell />
 				</LoginGateProvider>
 			</IonReactRouter>

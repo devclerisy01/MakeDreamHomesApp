@@ -30,7 +30,7 @@ export function TabsShell() {
 
 	return (
 		<IonTabs>
-			<IonRouterOutlet>
+			<IonRouterOutlet id="main-content">
 				<Route exact path="/home">
 					<Home />
 				</Route>

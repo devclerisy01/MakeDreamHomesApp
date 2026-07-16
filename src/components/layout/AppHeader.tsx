@@ -1,4 +1,10 @@
-import { IonHeader, IonIcon, IonToolbar, useIonRouter } from "@ionic/react";
+import {
+	IonHeader,
+	IonIcon,
+	IonMenuToggle,
+	IonToolbar,
+	useIonRouter,
+} from "@ionic/react";
 import { useEffect, useState } from "react";
 
 import { CityPickerModal } from "@/components/location/CityPickerModal";
@@ -24,9 +30,9 @@ interface AppHeaderProps {
 }
 
 /**
- * Shared top bar: leading menu/back button, title/logo, location city picker,
- * language selector + notification bell. Language and notifications are
- * display-only in Phase 1; the location pill scopes every listing by city.
+ * Shared top bar: a leading back / "three bars" button (the menu button opens
+ * the side drawer — see {@link ./SideMenu}), title/logo, the location city
+ * picker and a static language indicator.
  */
 export function AppHeader({
 	title,
@@ -71,13 +77,16 @@ export function AppHeader({
 							<IonIcon icon={ICONS.back} className="text-2xl" />
 						</button>
 					) : (
-						<button
-							className="cursor-pointer border-none bg-transparent p-1.5 leading-none text-ink"
-							type="button"
-							aria-label="Menu"
-						>
-							<IonIcon icon={ICONS.menu} className="text-[20px]" />
-						</button>
+						// Opens the side drawer (SideMenu) with the account action.
+						<IonMenuToggle menu="app-menu" autoHide={false}>
+							<button
+								className="cursor-pointer border-none bg-transparent p-1.5 leading-none text-ink"
+								type="button"
+								aria-label="Menu"
+							>
+								<IonIcon icon={ICONS.menu} className="text-[20px]" />
+							</button>
+						</IonMenuToggle>
 					)}
 
 					<div className="min-w-0 flex-1">
@@ -112,24 +121,14 @@ export function AppHeader({
 								<IonIcon icon={ICONS.chevronDown} className="text-[10px]" />
 							</button>
 						) : null}
-						<button
-							className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2 py-1 text-[11px] font-medium text-ink"
-							type="button"
-						>
+						{/* English-only for now — a static indicator, not a dead dropdown. */}
+						<span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2 py-1 text-[11px] font-medium text-ink">
 							<IonIcon
 								icon={ICONS.language}
 								className="text-[13px] text-muted-light"
 							/>
 							English
-							<IonIcon icon={ICONS.chevronDown} className="text-[10px]" />
-						</button>
-						<button
-							className="cursor-pointer border-none bg-transparent p-1 leading-none text-ink"
-							type="button"
-							aria-label="Notifications"
-						>
-							<IonIcon icon={ICONS.notifications} className="text-xl" />
-						</button>
+						</span>
 					</div>
 				</div>
 			</IonToolbar>
