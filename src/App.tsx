@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { SplashScreen } from "@capacitor/splash-screen";
 import { IonApp, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { useEffect } from "react";
@@ -32,6 +34,27 @@ const App: React.FC = () => {
 	// else the default). Idempotent — no-op when a city is already stored.
 	useEffect(() => {
 		void ensureLocationInitialized();
+	}, []);
+
+	// The native splash is held open (launchAutoHide: false) until here, so the
+	// user sees the branded splash instead of a blank WebView while JS boots.
+	// Hide it only after the browser has actually PAINTED the first content frame
+	// — a single rAF fires before that paint, so we chain a second rAF (paint N
+	// is on screen by the time it runs). Hiding on the first rAF lifts the splash
+	// a frame too early and flashes the empty WebView; the double rAF is what
+	// makes the hand-off seamless. Fade over 300ms for a soft cross-dissolve.
+	useEffect(() => {
+		if (!Capacitor.isNativePlatform()) return;
+		let raf2 = 0;
+		const raf1 = requestAnimationFrame(() => {
+			raf2 = requestAnimationFrame(() => {
+				void SplashScreen.hide({ fadeOutDuration: 300 });
+			});
+		});
+		return () => {
+			cancelAnimationFrame(raf1);
+			cancelAnimationFrame(raf2);
+		};
 	}, []);
 
 	return (

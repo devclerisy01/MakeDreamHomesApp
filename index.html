@@ -6,11 +6,25 @@
 
 		<base href="/" />
 
-		<meta name="color-scheme" content="light dark" />
+		<!-- App is light-only. Declaring `light` stops the WebView painting a
+		     black background on dark-mode devices before the CSS bundle loads. -->
+		<meta name="color-scheme" content="light" />
 		<meta
 			name="viewport"
 			content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
 		/>
+
+		<!-- Paint the app's own background on the very first frame — before the
+		     JS/CSS bundle loads — so there's no black/blank/white flash between
+		     the native splash and the app's first render. Matches
+		     `--ion-background-color` so the splash hand-off has no colour jump. -->
+		<style>
+			html,
+			body,
+			#root {
+				background-color: #f4f6fb;
+			}
+		</style>
 		<meta name="format-detection" content="telephone=no" />
 		<meta name="msapplication-tap-highlight" content="no" />
 
