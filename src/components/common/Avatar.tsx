@@ -20,7 +20,7 @@ export function Avatar({
 }: AvatarProps) {
 	const url = assetUrl(image);
 	const initials =
-		name
+		(name ?? "")
 			.split(/\s+/)
 			.filter(Boolean)
 			.slice(0, 2)

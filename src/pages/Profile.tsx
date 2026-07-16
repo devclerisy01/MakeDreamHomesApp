@@ -316,9 +316,12 @@ export default function Profile() {
 					</div>
 
 					{tab === "savedPros" ? (
-						<SavedList entity="users" />
+						// Distinct keys force a fresh mount per entity — otherwise the
+						// reused instance briefly renders the previous tab's items with the
+						// wrong card (e.g. a Lead as a ProfessionalCard) and crashes.
+						<SavedList key="saved-users" entity="users" />
 					) : tab === "savedLeads" ? (
-						<SavedList entity="leads" />
+						<SavedList key="saved-leads" entity="leads" />
 					) : (
 						<div className="mt-4 flex flex-col gap-4">
 							{/* ---- Identity ---- */}
