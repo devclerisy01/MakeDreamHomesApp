@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { CategoryOption } from "@/lib/api/misc";
 
 interface CategoryChipsProps {
@@ -9,6 +11,8 @@ interface CategoryChipsProps {
 	onChange: (ids: number[]) => void;
 	error?: string | null;
 	disabled?: boolean;
+	/** Extra chip(s) rendered inline as the last item of the wrap row (e.g. "Other"). */
+	trailing?: ReactNode;
 }
 
 /**
@@ -23,6 +27,7 @@ export function CategoryChips({
 	onChange,
 	error,
 	disabled,
+	trailing,
 }: CategoryChipsProps) {
 	function toggle(id: number) {
 		if (single) {
@@ -48,18 +53,19 @@ export function CategoryChips({
 							aria-pressed={active}
 							disabled={disabled}
 							onClick={() => toggle(option.id)}
-							className={`rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
+							className={`rounded-full border px-[9px] py-1 text-[11px] font-semibold transition-colors disabled:opacity-60 ${
 								active
-									? "border-primary bg-primary text-white"
-									: "border-line bg-white text-muted"
+									? "border-primary bg-[#f5f7fb] text-primary"
+									: "border-[#e2e4ef] bg-white text-[#6c6f7b]"
 							}`}
 						>
 							{option.value}
 						</button>
 					);
 				})}
+				{trailing}
 			</div>
-			{error ? <p className="mt-1.5 text-sm text-danger">{error}</p> : null}
+			{error ? <p className="mt-1.5 text-[11px] text-danger">{error}</p> : null}
 		</div>
 	);
 }

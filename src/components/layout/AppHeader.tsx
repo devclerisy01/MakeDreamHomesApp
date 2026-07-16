@@ -97,7 +97,7 @@ export function AppHeader({
 								className="h-[26px] w-auto"
 							/>
 						) : (
-							<h1 className="m-0 truncate text-[19px] font-extrabold text-ink">
+							<h1 className="m-0 truncate text-base font-bold text-ink">
 								{title}
 							</h1>
 						)}

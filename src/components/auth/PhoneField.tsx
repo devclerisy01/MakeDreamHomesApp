@@ -48,7 +48,7 @@ export function PhoneField({
 							event.target.value.replace(/\D/g, "").slice(0, PHONE_DIGITS),
 						)
 					}
-					className="min-w-0 flex-1 border-none bg-transparent font-sans text-[14px] text-ink outline-none placeholder:font-medium placeholder:text-[#c4c7cc] disabled:opacity-60"
+					className="min-w-0 flex-1 border-none bg-transparent font-sans text-[12px] text-ink outline-none placeholder:font-medium placeholder:text-[#c4c7cc] disabled:opacity-60"
 				/>
 			</div>
 			{error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
