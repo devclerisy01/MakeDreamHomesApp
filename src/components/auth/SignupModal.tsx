@@ -1,17 +1,21 @@
-import { IonIcon, IonSpinner, useIonToast } from "@ionic/react";
+import { IonIcon, IonSpinner } from "@ionic/react";
 import { arrowForward, checkmarkOutline, closeOutline } from "ionicons/icons";
 import { type FormEvent, useEffect, useState } from "react";
 
 import { OtpVerify } from "@/components/auth/OtpVerify";
 import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
+import { AddressAutocomplete } from "@/components/common/AddressAutocomplete";
 import { CategoryChips } from "@/components/common/CategoryChips";
 import { TextField } from "@/components/common/TextField";
+import { UI_MESSAGES } from "@/constants/messages";
+import type { AddressResult } from "@/lib/api/places";
 import { checkPhone, otpRegister, requestOtp } from "@/lib/api/auth";
 import {
 	type CategoryOption,
 	getMaterialCategories,
 	getProfessionalCategories,
 } from "@/lib/api/misc";
+import { toastError, toastInfo, toastSuccess } from "@/lib/api/toast";
 import { storeSession } from "@/lib/auth/session";
 
 type RoleId = "user" | "professional" | "dealer" | "supplier";
@@ -46,8 +50,6 @@ export function SignupPanel({
 	onAuthenticated,
 	onSwitchToLogin,
 }: SignupPanelProps) {
-	const [present] = useIonToast();
-
 	const [role, setRole] = useState<RoleId>("user");
 	const [phone, setPhone] = useState(
 		() => initialPhone?.replace(/\D/g, "").slice(0, PHONE_DIGITS) ?? "",
@@ -55,6 +57,9 @@ export function SignupPanel({
 	const [firstName, setFirstName] = useState("");
 	const [lastName, setLastName] = useState("");
 	const [address, setAddress] = useState("");
+	// Structured parts from the last autocomplete selection (so the new user gets
+	// a resolved location_id + city/state — needed to appear in the directory).
+	const [addressMeta, setAddressMeta] = useState<AddressResult | null>(null);
 	const [acceptedTerms, setAcceptedTerms] = useState(false);
 
 	// Category picker (professional trade / supplier products), like the web form.
@@ -113,11 +118,7 @@ export function SignupPanel({
 		try {
 			const { exists } = await checkPhone(phone);
 			if (exists) {
-				void present({
-					message: "This number already has an account. Please sign in.",
-					duration: 2200,
-					position: "top",
-				});
+				toastInfo(UI_MESSAGES.numberRegistered);
 				onSwitchToLogin(phone);
 				return;
 			}
@@ -145,7 +146,13 @@ export function SignupPanel({
 				firstName: firstName.trim() || undefined,
 				lastName: lastName.trim() || undefined,
 				acceptedTerms,
-				address: address.trim() || undefined,
+				address: (addressMeta?.address || address).trim() || undefined,
+				locality: addressMeta?.locality,
+				city: addressMeta?.city,
+				state: addressMeta?.state,
+				pincode: addressMeta?.pincode,
+				latitude: addressMeta?.latitude,
+				longitude: addressMeta?.longitude,
 				professionalCategoryId:
 					role === "professional" ? (proCategory ?? undefined) : undefined,
 				supplierProductIds:
@@ -154,12 +161,7 @@ export function SignupPanel({
 						: undefined,
 			});
 			storeSession(result);
-			void present({
-				message: "Account created successfully.",
-				duration: 1500,
-				position: "top",
-				color: "success",
-			});
+			toastSuccess(UI_MESSAGES.accountCreated);
 			onAuthenticated();
 			return true;
 		} catch {
@@ -174,19 +176,10 @@ export function SignupPanel({
 		try {
 			const otp = await requestOtp(phone);
 			setVerificationId(otp.verificationId);
-			void present({
-				message: "A new code has been sent.",
-				duration: 1500,
-				position: "top",
-			});
+			toastInfo(UI_MESSAGES.codeSent);
 			return otp.resendAfter;
 		} catch {
-			void present({
-				message: "Couldn't resend the code. Try again shortly.",
-				duration: 1800,
-				position: "top",
-				color: "danger",
-			});
+			toastError(UI_MESSAGES.codeResendFailed);
 			throw new Error("resend failed");
 		}
 	}
@@ -318,13 +311,20 @@ export function SignupPanel({
 							</div>
 						) : null}
 
-						<TextField
+						<AddressAutocomplete
 							value={address}
-							onChange={setAddress}
-							placeholder="Address"
-							multiline
-							rows={4}
-							disabled={busy}
+							ariaLabel="Address"
+							placeholder="Search your address"
+							enableCurrentLocation
+							onChange={(value) => {
+								setAddress(value);
+								// A manual edit invalidates the last resolved selection.
+								setAddressMeta(null);
+							}}
+							onSelect={(result) => {
+								setAddress(result.full);
+								setAddressMeta(result);
+							}}
 						/>
 
 						<div>

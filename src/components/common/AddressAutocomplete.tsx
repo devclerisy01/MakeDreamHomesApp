@@ -1,7 +1,8 @@
-import { IonIcon, IonSpinner, useIonToast } from "@ionic/react";
+import { IonIcon, IonSpinner } from "@ionic/react";
 import { locateOutline, locationOutline } from "ionicons/icons";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
+import { UI_MESSAGES } from "@/constants/messages";
 import {
 	type AddressResult,
 	placeAutocomplete,
@@ -9,6 +10,7 @@ import {
 	placeReverseGeocode,
 	type PlacePrediction,
 } from "@/lib/api/places";
+import { toastInfo } from "@/lib/api/toast";
 
 interface AddressAutocompleteProps {
 	value: string;
@@ -59,7 +61,6 @@ export function AddressAutocomplete({
 	error,
 	enableCurrentLocation = false,
 }: AddressAutocompleteProps) {
-	const [present] = useIonToast();
 	const [suggestions, setSuggestions] = useState<PlacePrediction[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [locating, setLocating] = useState(false);
@@ -130,11 +131,7 @@ export function AddressAutocomplete({
 	function handleUseCurrentLocation() {
 		if (locating) return;
 		if (!navigator.geolocation) {
-			void present({
-				message: "Location isn't available on this device.",
-				duration: 1800,
-				position: "bottom",
-			});
+			toastInfo(UI_MESSAGES.locationUnavailable);
 			return;
 		}
 		setOpen(false);
@@ -150,11 +147,7 @@ export function AddressAutocomplete({
 						onChange(result.full);
 						onSelect(result);
 					} else {
-						void present({
-							message: "Couldn't determine your location. Enter it manually.",
-							duration: 1800,
-							position: "bottom",
-						});
+						toastInfo(UI_MESSAGES.locationFailed);
 					}
 				} finally {
 					setLocating(false);
@@ -162,14 +155,11 @@ export function AddressAutocomplete({
 			},
 			(err) => {
 				setLocating(false);
-				void present({
-					message:
-						err.code === err.PERMISSION_DENIED
-							? "Location permission denied. Please enter it manually."
-							: "Couldn't determine your location. Enter it manually.",
-					duration: 2000,
-					position: "bottom",
-				});
+				toastInfo(
+					err.code === err.PERMISSION_DENIED
+						? UI_MESSAGES.locationDenied
+						: UI_MESSAGES.locationFailed,
+				);
 			},
 			GEO_OPTIONS,
 		);

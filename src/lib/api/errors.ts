@@ -9,6 +9,11 @@ export class ApiError extends Error {
 		this.status = status;
 		this.details = details;
 	}
+
+	/** True for a 401 (missing/expired auth). */
+	get isUnauthorized(): boolean {
+		return this.status === 401;
+	}
 }
 
 export function isApiError(value: unknown): value is ApiError {

@@ -1,20 +1,27 @@
 import { IonIcon } from "@ionic/react";
-import { locationOutline } from "ionicons/icons";
+import { createOutline, locationOutline, trashOutline } from "ionicons/icons";
 
 import { getImageSrc } from "@/lib/format";
 import type { PortfolioItem } from "@/types";
 
 /**
  * Portfolio tile with the title + city overlaid on the image (profile grid),
- * matching the design — distinct from the caption-below `PortfolioCard`.
+ * matching the design — distinct from the caption-below `PortfolioCard`. On the
+ * owner's profile it shows edit + delete actions.
  */
 export function PortfolioTile({
 	item,
 	pending = false,
+	onEdit,
+	onDelete,
 }: {
 	item: PortfolioItem;
 	/** Badge the tile when the entry is still awaiting moderation. */
 	pending?: boolean;
+	/** Owner-only: open the edit sheet for this entry. */
+	onEdit?: () => void;
+	/** Owner-only: delete this entry (with confirm). */
+	onDelete?: () => void;
 }) {
 	const src = getImageSrc(item);
 	const place = item.city || item.location;
@@ -23,20 +30,46 @@ export function PortfolioTile({
 			{src ? (
 				<img
 					src={src}
-					alt={item.title}
+					alt={item.title ?? "Portfolio image"}
 					loading="lazy"
 					className="h-full w-full object-cover"
 				/>
 			) : null}
 			{pending ? (
-				<span className="absolute right-2 top-2 rounded-md bg-amber-400/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">
+				<span className="absolute left-2 top-2 rounded-md bg-amber-400/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">
 					Pending
 				</span>
 			) : null}
+			{onEdit || onDelete ? (
+				<div className="absolute right-2 top-2 flex gap-1.5">
+					{onEdit ? (
+						<button
+							type="button"
+							aria-label="Edit project"
+							onClick={onEdit}
+							className="grid h-7 w-7 place-items-center rounded-full bg-black/55 text-white backdrop-blur active:bg-black/75"
+						>
+							<IonIcon icon={createOutline} className="text-[15px]" />
+						</button>
+					) : null}
+					{onDelete ? (
+						<button
+							type="button"
+							aria-label="Delete project"
+							onClick={onDelete}
+							className="grid h-7 w-7 place-items-center rounded-full bg-black/55 text-white backdrop-blur active:bg-black/75"
+						>
+							<IonIcon icon={trashOutline} className="text-[15px]" />
+						</button>
+					) : null}
+				</div>
+			) : null}
 			<div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-3 pb-3 pt-10">
-				<h4 className="m-0 line-clamp-1 text-sm font-bold text-white">
-					{item.title}
-				</h4>
+				{item.title ? (
+					<h4 className="m-0 line-clamp-1 text-sm font-bold text-white">
+						{item.title}
+					</h4>
+				) : null}
 				{place ? (
 					<span className="mt-0.5 flex items-center gap-1 text-[11px] text-white/85">
 						<IonIcon icon={locationOutline} className="text-xs" />

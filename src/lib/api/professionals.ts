@@ -22,10 +22,11 @@ interface ApiUser {
 	rating?: string | number;
 	ratingAverage?: string | number;
 	categoryAverages?: {
-		qualityOfWork?: string | number;
-		behaviourCommunication?: string | number;
+		quality?: string | number;
+		behaviour?: string | number;
 		timeliness?: string | number;
-		transparencyHonesty?: string | number;
+		communication?: string | number;
+		price?: string | number;
 	};
 	reviewCount?: string | number;
 	experienceYears?: string | number;
@@ -76,12 +77,11 @@ function toProfessionalListing(
 		rating: toNumber(user.rating),
 		ratingAverage: toNumber(user.ratingAverage),
 		categoryAverages: {
-			qualityOfWork: toNumber(user.categoryAverages?.qualityOfWork),
-			behaviourCommunication: toNumber(
-				user.categoryAverages?.behaviourCommunication,
-			),
+			quality: toNumber(user.categoryAverages?.quality),
+			behaviour: toNumber(user.categoryAverages?.behaviour),
 			timeliness: toNumber(user.categoryAverages?.timeliness),
-			transparencyHonesty: toNumber(user.categoryAverages?.transparencyHonesty),
+			communication: toNumber(user.categoryAverages?.communication),
+			price: toNumber(user.categoryAverages?.price),
 		},
 		reviewCount: toNumber(user.reviewCount),
 		experienceYears: toNumber(user.experienceYears),
@@ -231,6 +231,11 @@ export async function fetchDirectoryFilters(
 		params.set("professionalUserType", query.professionalUserType);
 	}
 	if (query.productType) params.set("productType", query.productType);
+	// Forward the boolean toggles so the facet counts match the listing (the API
+	// scopes counts by these too); the selected localities are intentionally NOT
+	// sent — a facet must not filter its own options.
+	if (query.hasReviews) params.set("hasReviews", "true");
+	if (query.hasPortfolio) params.set("hasPortfolio", "true");
 
 	const data = await apiGet<{ locations: LocationFacet[] }>(
 		`/app/users/filters?${params.toString()}`,

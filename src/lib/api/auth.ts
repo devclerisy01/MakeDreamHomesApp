@@ -13,6 +13,7 @@ import type { Session } from "@/lib/auth/session";
 export interface AuthUser {
 	id: string;
 	phone: string | null;
+	email: string | null;
 	firstName: string | null;
 	lastName: string | null;
 	gender: string | null;
@@ -23,13 +24,22 @@ export interface AuthUser {
 	city: string | null;
 	state: string | null;
 	pincode: string | null;
+	latitude?: string | null;
+	longitude?: string | null;
 	about: string | null;
 	experience: string | null;
 	businessName: string | null;
+	/** Business GST number (business types). */
+	businessGstin: string | null;
+	/** Dealer RERA certification. */
+	isReraCertified?: boolean | null;
+	reraNumber?: string | null;
 	/** Selected professional-category id (professionals only). */
 	professionalUserType?: string | number | null;
 	/** Material supplier's selected product ids. */
 	supplierProductIds?: number[];
+	/** Preferred language code (for the user-facing frontend). */
+	userPreferredLanguage?: string | null;
 	/** Aggregate counts the API precomputes for the profile dashboard. */
 	portfolioCount?: number;
 	leadCount?: number;
@@ -109,6 +119,7 @@ export function me(): Promise<AuthUser> {
 export interface UpdateProfilePayload {
 	firstName?: string;
 	lastName?: string;
+	email?: string;
 	gender?: string;
 	address?: string;
 	locality?: string;
@@ -123,6 +134,9 @@ export interface UpdateProfilePayload {
 	professionalCategoryId?: number;
 	businessName?: string;
 	businessGstin?: string;
+	/** Dealer RERA certification (send `reraNumber: ""` to clear when un-certified). */
+	isReraCertified?: boolean;
+	reraNumber?: string;
 	supplierProductIds?: number[];
 }
 

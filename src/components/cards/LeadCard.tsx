@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
 import { SaveButton } from "@/components/common/SaveButton";
 import { useClampOverflow } from "@/hooks/useClampOverflow";
-import { leadBaseCategory, leadIntent } from "@/lib/api/leads";
+import { leadBaseCategory, leadIntentChip } from "@/lib/api/leads";
 import { formatBudget, timeAgo } from "@/lib/format";
 import { CARD } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
@@ -32,7 +32,7 @@ export function LeadCard({
 	/** Hide the "Read more" affordance (Home feed shows a static card). */
 	showReadMore?: boolean;
 }) {
-	const intent = leadIntent(lead.category);
+	const intent = leadIntentChip(lead.category);
 	const icon = CATEGORY_ICON[leadBaseCategory(lead.category)];
 	const title = lead.summary?.trim() || lead.description;
 	const budget = formatBudget(lead.budget);

@@ -9,16 +9,18 @@ export type DirectoryCategoryId =
 
 /** Per-category published-review averages (0 when the professional has none). */
 export interface CategoryAverages {
-	qualityOfWork: number;
-	behaviourCommunication: number;
+	quality: number;
+	behaviour: number;
 	timeliness: number;
-	transparencyHonesty: number;
+	communication: number;
+	price: number;
 }
 
 /** A single project shown in a professional's portfolio strip. */
 export interface PortfolioItem {
 	id: string;
-	title: string;
+	/** Null for professional portfolios (only property/product entries have a title). */
+	title: string | null;
 	/** Directory/showcase items carry `city`; the detail endpoint sends `location`. */
 	city?: string;
 	location?: string;
@@ -60,10 +62,11 @@ export interface ProfessionalListing {
 export interface ReviewsBreakdown {
 	average: number;
 	overall: number;
-	qualityOfWork: number;
-	behaviourCommunication: number;
+	quality: number;
+	behaviour: number;
 	timeliness: number;
-	transparencyHonesty: number;
+	communication: number;
+	price: number;
 }
 
 export interface ProfessionalReview {
@@ -72,6 +75,12 @@ export interface ProfessionalReview {
 	rating: number;
 	comment: string;
 	createdAt?: string;
+	/** Per-review sub-category scores (0 when unset). Keyed by review category. */
+	quality?: number;
+	behaviour?: number;
+	timeliness?: number;
+	communication?: number;
+	price?: number;
 }
 
 export interface ProfessionalDetail extends ProfessionalListing {

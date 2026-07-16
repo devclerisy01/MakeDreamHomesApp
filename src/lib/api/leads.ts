@@ -21,10 +21,14 @@ export interface RequirementInput {
 	type: RequirementType;
 	/** Buy/sell — property & material only (professional has no intent). */
 	intent?: "buy" | "sell";
+	/** Professional track: hire someone vs. offer yourself for work. */
+	proIntent?: "hire" | "available";
 	/** Professional / material: selected category names (become the lead tags). */
 	categories?: string[];
-	/** Property: encoded `"group,type"` (e.g. `"residential,flat"`). */
-	propertyRequirement?: string;
+	/** Property: category group slug (residential / commercial / agriculture). */
+	propertyGroup?: string;
+	/** Property: concrete type slug (e.g. `flat`); empty for commercial/agriculture. */
+	propertyType?: string;
 	/** Society name (buy residential) or commercial property name. */
 	placeName?: string;
 	description: string;
@@ -52,23 +56,35 @@ export interface RequirementInput {
 export async function createRequirement(
 	input: RequirementInput,
 ): Promise<void> {
+	// Buy/sell folds into the category for property & material; the professional
+	// track folds hire-vs-available the same way (`hire_professional` /
+	// `available_professional`) — the API only recognises those two for the
+	// professional family, so sending a bare "professional" hides the lead.
 	const category =
 		input.type === "property"
 			? `${input.intent ?? "buy"}_property`
 			: input.type === "material"
 				? `${input.intent ?? "buy"}_material`
-				: "professional";
-
-	const requirement =
-		input.type === "property"
-			? (input.propertyRequirement ?? "")
-			: (input.categories ?? []).join(",");
+				: input.proIntent === "available"
+					? "available_professional"
+					: "hire_professional";
 
 	const body: Record<string, string> = {
 		category,
-		requirement,
 		description: input.description.trim(),
 	};
+
+	// Property keeps the group in `requirement` and the concrete type in the
+	// dedicated `propertyType` field; other tracks send category names/ids via
+	// `requirement`.
+	if (input.type === "property") {
+		if (input.propertyGroup?.trim())
+			body.requirement = input.propertyGroup.trim();
+		if (input.propertyType?.trim())
+			body.propertyType = input.propertyType.trim();
+	} else {
+		body.requirement = (input.categories ?? []).join(",");
+	}
 	if (input.address?.trim()) body.address = input.address.trim();
 	if (input.locality?.trim()) body.locality = input.locality.trim();
 	if (input.city?.trim()) body.city = input.city.trim();
@@ -102,6 +118,8 @@ export interface LeadsQuery {
 	intent?: string[];
 	/** Property-group tokens (residential / commercial / agriculture). */
 	propertyGroup?: string[];
+	/** Property concrete-type tokens (flat / plot / kothi / …). */
+	propertyType?: string[];
 	/** Selected `city~locality` location tokens (from the `/filters` facets). */
 	places?: string[];
 }
@@ -140,6 +158,7 @@ function buildLeadsParams(query: LeadsQuery): URLSearchParams {
 	if (query.userId?.trim()) params.set("userId", query.userId.trim());
 	for (const v of query.intent ?? []) params.append("intent", v);
 	for (const v of query.propertyGroup ?? []) params.append("propertyGroup", v);
+	for (const v of query.propertyType ?? []) params.append("propertyType", v);
 	for (const token of query.places ?? []) params.append("places", token);
 	return params;
 }
@@ -159,6 +178,7 @@ export async function fetchLeadFilters(
 	if (search) params.set("search", search);
 	for (const v of query.intent ?? []) params.append("intent", v);
 	for (const v of query.propertyGroup ?? []) params.append("propertyGroup", v);
+	for (const v of query.propertyType ?? []) params.append("propertyType", v);
 	return (
 		(await apiGet<LocationFacet[]>(`/app/leads/filters?${params.toString()}`, {
 			signal,
@@ -208,11 +228,17 @@ export function getMyLeads(
 	return fetchLeadsPage("/app/leads/mine", query, true, signal);
 }
 
-/** Buy/sell intent derived from the raw category (`buy_property` → "buy"). */
-export function leadIntent(category: string): "buy" | "sell" | null {
+/**
+ * Display label for the intent chip on a lead card (matches the web's
+ * `INTENT_CHIP`): buy/sell for property & material, hire/available for the
+ * professional track. Returns null when there's no intent to show.
+ */
+export function leadIntentChip(category: string): string | null {
 	const c = category.toLowerCase();
-	if (c.startsWith("buy")) return "buy";
-	if (c.startsWith("sell")) return "sell";
+	if (c.startsWith("buy")) return "Buy";
+	if (c.startsWith("sell")) return "Sell";
+	if (c.startsWith("hire")) return "Hiring";
+	if (c.startsWith("available")) return "Available for work";
 	return null;
 }
 

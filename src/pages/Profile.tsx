@@ -4,8 +4,8 @@ import {
 	IonPage,
 	IonRefresher,
 	IonRefresherContent,
+	useIonAlert,
 	useIonRouter,
-	useIonToast,
 } from "@ionic/react";
 import {
 	addOutline,
@@ -31,10 +31,16 @@ import { MyLeadCard } from "@/components/profile/MyLeadCard";
 import { PortfolioTile } from "@/components/profile/PortfolioTile";
 import { SavedList } from "@/components/profile/SavedList";
 import { encodeProfessionalId, ROUTES } from "@/constants/routes";
+import { UI_MESSAGES } from "@/constants/messages";
 import { me } from "@/lib/api/auth";
 import { getMyLeads } from "@/lib/api/leads";
-import { getMyPortfolio, type PortfolioEntry } from "@/lib/api/portfolio";
+import {
+	deletePortfolio,
+	getMyPortfolio,
+	type PortfolioEntry,
+} from "@/lib/api/portfolio";
 import { getProfessionalDetail } from "@/lib/api/professionals";
+import { toastInfo } from "@/lib/api/toast";
 import { useLogin } from "@/lib/auth/login-gate";
 import { clearSession, setStoredUser, useAuth } from "@/lib/auth/session";
 import { CARD, SECTION_HEAD, SECTION_TITLE, TAG_PRIMARY } from "@/lib/ui";
@@ -92,7 +98,7 @@ function CompletionRing({ percent }: { percent: number }) {
 
 export default function Profile() {
 	const router = useIonRouter();
-	const [present] = useIonToast();
+	const [presentAlert] = useIonAlert();
 	const { isAuthed, user } = useAuth();
 	const { openLogin } = useLogin();
 
@@ -103,6 +109,33 @@ export default function Profile() {
 	const [reloadKey, setReloadKey] = useState(0);
 	const [editOpen, setEditOpen] = useState(false);
 	const [addPortfolioOpen, setAddPortfolioOpen] = useState(false);
+	// The portfolio entry being edited (null = the sheet is in "add" mode).
+	const [editEntry, setEditEntry] = useState<PortfolioEntry | null>(null);
+
+	/** Confirm, then soft-delete a portfolio entry (removed from the list). */
+	function confirmDeletePortfolio(id: string) {
+		void presentAlert({
+			header: "Delete project?",
+			message: "This removes the project from your portfolio.",
+			buttons: [
+				{ text: "Cancel", role: "cancel" },
+				{
+					text: "Delete",
+					role: "destructive",
+					handler: () => {
+						// Success/error toast centrally (portfolio.deleted).
+						deletePortfolio(id)
+							.then(() =>
+								setMyPortfolio((prev) =>
+									(prev ?? []).filter((p) => p.id !== id),
+								),
+							)
+							.catch(() => {});
+					},
+				},
+			],
+		});
+	}
 
 	const userId = user?.id;
 	const load = useCallback(
@@ -206,6 +239,14 @@ export default function Profile() {
 	const hasReviews = Boolean(detail?.reviewsBreakdown && detail.reviewsCount);
 
 	// Profile-completion checklist → percentage (from the real user's fields).
+	const isBusiness = user.userType !== "person";
+	const businessDone =
+		filled(user.businessName) &&
+		(user.userType === "professional"
+			? Boolean(user.professionalUserType)
+			: user.userType === "supplier"
+				? (user.supplierProductIds?.length ?? 0) > 0
+				: true);
 	const steps: boolean[] = [
 		filled(user.firstName) && filled(user.lastName) && filled(user.gender),
 		filled(user.profilePhoto),
@@ -214,22 +255,18 @@ export default function Profile() {
 			filled(user.city) &&
 			filled(user.state) &&
 			filled(user.pincode),
-		(user.leadCount ?? 0) > 0,
+		leads.length > 0,
 	];
-	if (user.userType !== "person") steps.push(filled(user.businessName));
-	if (user.userType === "professional") {
-		steps.push((user.portfolioCount ?? 0) > 0);
+	if (isBusiness) {
+		steps.push(businessDone);
+		// Portfolio step shows for every business type (not just professionals).
+		steps.push(portfolio.length > 0);
 	}
 	const percent = Math.round(
 		(steps.filter(Boolean).length / steps.length) * 100,
 	);
 
-	const comingSoon = (what: string) =>
-		void present({
-			message: `${what} is coming soon.`,
-			duration: 1600,
-			position: "bottom",
-		});
+	const comingSoon = (what: string) => toastInfo(UI_MESSAGES.comingSoon(what));
 
 	const iconBtn =
 		"grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted";
@@ -394,6 +431,21 @@ export default function Profile() {
 												key={item.id}
 												item={item}
 												pending={item.pending}
+												onEdit={
+													myPortfolio
+														? () => {
+																const full = myPortfolio.find(
+																	(p) => p.id === item.id,
+																);
+																if (full) setEditEntry(full);
+															}
+														: undefined
+												}
+												onDelete={
+													myPortfolio
+														? () => confirmDeletePortfolio(item.id)
+														: undefined
+												}
 											/>
 										))}
 									</div>
@@ -472,10 +524,20 @@ export default function Profile() {
 				/>
 
 				<AddPortfolioModal
-					isOpen={addPortfolioOpen}
-					onClose={() => setAddPortfolioOpen(false)}
-					onSaved={(entry) => {
-						setMyPortfolio((prev) => [entry, ...(prev ?? [])]);
+					isOpen={addPortfolioOpen || editEntry !== null}
+					entry={editEntry}
+					onClose={() => {
+						setAddPortfolioOpen(false);
+						setEditEntry(null);
+					}}
+					onSaved={(saved) => {
+						// Upsert: replace the edited entry, or prepend a new one.
+						setMyPortfolio((prev) => {
+							const list = prev ?? [];
+							return list.some((p) => p.id === saved.id)
+								? list.map((p) => (p.id === saved.id ? saved : p))
+								: [saved, ...list];
+						});
 						setTab("overview");
 					}}
 				/>

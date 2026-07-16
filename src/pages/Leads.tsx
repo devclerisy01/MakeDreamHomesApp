@@ -61,6 +61,18 @@ const PROPERTY_GROUP_GROUP: FilterGroup = {
 	],
 };
 
+const PROPERTY_TYPE_GROUP: FilterGroup = {
+	key: "propertyType",
+	label: "Type",
+	header: "Property Type",
+	multi: true,
+	options: [
+		{ value: "plot", label: "Plot" },
+		{ value: "flat", label: "Flat" },
+		{ value: "kothi", label: "Kothi" },
+	],
+};
+
 const placesOf = (sel: FilterSelection): string[] =>
 	Object.entries(sel)
 		.filter(([key]) => key.startsWith("city:"))
@@ -105,6 +117,7 @@ export default function Leads() {
 		() => selection.propertyGroup ?? [],
 		[selection],
 	);
+	const propertyType = useMemo(() => selection.propertyType ?? [], [selection]);
 	const places = useMemo(() => placesOf(selection), [selection]);
 	const activeFilterCount = useMemo(
 		() => Object.values(selection).reduce((n, v) => n + v.length, 0),
@@ -116,17 +129,18 @@ export default function Leads() {
 		if (!filtersOpen) return;
 		const controller = new AbortController();
 		fetchLeadFilters(
-			{ category, search, intent, propertyGroup },
+			{ category, search, intent, propertyGroup, propertyType },
 			controller.signal,
 		)
 			.then(setLocations)
 			.catch(() => {});
 		return () => controller.abort();
-	}, [filtersOpen, category, search, intent, propertyGroup]);
+	}, [filtersOpen, category, search, intent, propertyGroup, propertyType]);
 
 	const groups = useMemo<FilterGroup[]>(() => {
 		const list: FilterGroup[] = [];
-		if (category === "property") list.push(INTENT_GROUP, PROPERTY_GROUP_GROUP);
+		if (category === "property")
+			list.push(INTENT_GROUP, PROPERTY_GROUP_GROUP, PROPERTY_TYPE_GROUP);
 		else if (category === "material") list.push(INTENT_GROUP);
 		for (const loc of locations) {
 			list.push({
@@ -155,11 +169,12 @@ export default function Leads() {
 					limit: LISTING_PAGE_SIZE,
 					intent,
 					propertyGroup,
+					propertyType,
 					places,
 				},
 				signal,
 			),
-		[category, search, userId, intent, propertyGroup, places],
+		[category, search, userId, intent, propertyGroup, propertyType, places],
 	);
 	const { items, status, hasMore, loadMore, reload } = usePagedList(
 		fetcher,

@@ -1,7 +1,9 @@
-import { IonIcon, useIonToast } from "@ionic/react";
+import { IonIcon } from "@ionic/react";
 import { heart, heartOutline } from "ionicons/icons";
 import { type MouseEvent, useEffect, useState } from "react";
 
+import { toastError } from "@/lib/api/toast";
+import { UI_MESSAGES } from "@/constants/messages";
 import {
 	cachedShortlistIds,
 	getShortlistedIds,
@@ -33,7 +35,6 @@ export function SaveButton({
 		cachedShortlistIds(entityType).includes(String(entityId)),
 	);
 	const [busy, setBusy] = useState(false);
-	const [present] = useIonToast();
 	const { openLogin } = useLogin();
 
 	// Seed the real saved state from the user's shortlist (one shared fetch).
@@ -59,12 +60,7 @@ export function SaveButton({
 			onToggle?.(result);
 		} catch {
 			setSaved(!next);
-			void present({
-				message: "Couldn't update. Try again.",
-				duration: 1800,
-				position: "bottom",
-				color: "danger",
-			});
+			toastError(UI_MESSAGES.saveFailed);
 		} finally {
 			setBusy(false);
 		}

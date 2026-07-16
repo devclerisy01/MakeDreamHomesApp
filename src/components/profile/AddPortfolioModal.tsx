@@ -1,23 +1,33 @@
-import { IonIcon, IonModal, IonSpinner, useIonToast } from "@ionic/react";
+import { IonIcon, IonModal, IonSpinner } from "@ionic/react";
 import { closeOutline, imageOutline } from "ionicons/icons";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { AddressAutocomplete } from "@/components/common/AddressAutocomplete";
 import { TextField } from "@/components/common/TextField";
-import { createPortfolio, type PortfolioEntry } from "@/lib/api/portfolio";
+import { UI_MESSAGES } from "@/constants/messages";
+import {
+	createPortfolio,
+	type PortfolioEntry,
+	updatePortfolio,
+} from "@/lib/api/portfolio";
+import { toastError } from "@/lib/api/toast";
 import { uploadImageViaPresign } from "@/lib/api/uploads";
 
 interface AddPortfolioModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSaved: (entry: PortfolioEntry) => void;
+	/** When set, the sheet edits this entry instead of creating a new one. */
+	entry?: PortfolioEntry | null;
 }
 
-interface Photo {
-	id: string;
-	file: File;
-	preview: string;
-}
+/**
+ * A photo in the picker: an existing media row (edit mode) or a newly-picked
+ * local file. Both carry a stable `id` used for cover selection + removal.
+ */
+type Photo =
+	| { kind: "existing"; id: string; url: string }
+	| { kind: "new"; id: string; file: File; preview: string };
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -27,20 +37,23 @@ let localSeq = 0;
 const newLocalId = () => `local-${++localSeq}`;
 
 /**
- * Add-project sheet for a signed-in professional — mirrors the web
- * `PortfolioModal`: a title, an address (Google autocomplete that fills the
- * locality/city/state/pincode fields) and one or more photos with a chosen
- * cover. Photos upload via the presigned flow; the entry is created PENDING and
- * handed back to the caller.
+ * Add / edit-project sheet for a signed-in professional — mirrors the web
+ * `PortfolioModal`: a title, category, description, an address (Google
+ * autocomplete that fills locality/city/state/pincode) and one or more photos
+ * with a chosen cover. In edit mode it also removes existing photos and appends
+ * new ones. Photos upload via the presigned flow; create/edit re-enter PENDING.
  */
 export function AddPortfolioModal({
 	isOpen,
 	onClose,
 	onSaved,
+	entry = null,
 }: AddPortfolioModalProps) {
-	const [present] = useIonToast();
+	const isEdit = Boolean(entry);
 
 	const [title, setTitle] = useState("");
+	const [description, setDescription] = useState("");
+	const [category, setCategory] = useState("");
 	const [address, setAddress] = useState("");
 	const [locality, setLocality] = useState("");
 	const [city, setCity] = useState("");
@@ -48,31 +61,43 @@ export function AddPortfolioModal({
 	const [pincode, setPincode] = useState("");
 	const [photos, setPhotos] = useState<Photo[]>([]);
 	const [coverId, setCoverId] = useState<string | null>(null);
+	/** Existing media ids the user removed (sent to the API on save). */
+	const [deletedIds, setDeletedIds] = useState<string[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 
-	// Reset the form each time the sheet opens.
+	// Seed the form each time the sheet opens — from the edited entry, or blank.
 	useEffect(() => {
 		if (!isOpen) return;
-		setTitle("");
-		setAddress("");
-		setLocality("");
-		setCity("");
-		setState("");
-		setPincode("");
-		setPhotos((prev) => {
-			for (const p of prev) URL.revokeObjectURL(p.preview);
-			return [];
-		});
-		setCoverId(null);
+		setTitle(entry?.title ?? "");
+		setDescription(entry?.description ?? "");
+		setCategory(entry?.category ?? "");
+		setAddress(entry?.address ?? "");
+		setLocality(entry?.locality ?? "");
+		setCity(entry?.city ?? "");
+		setState(entry?.state ?? "");
+		setPincode(entry?.pincode ?? "");
+		setDeletedIds([]);
 		setError(null);
-	}, [isOpen]);
+		setPhotos((prev) => {
+			for (const p of prev)
+				if (p.kind === "new") URL.revokeObjectURL(p.preview);
+			return (entry?.media ?? []).map((m) => ({
+				kind: "existing" as const,
+				id: m.id,
+				url: m.url,
+			}));
+		});
+		const cover = entry?.media.find((m) => m.isCover) ?? entry?.media[0];
+		setCoverId(cover?.id ?? null);
+	}, [isOpen, entry]);
 
-	// Revoke any remaining object URLs on unmount.
+	// Revoke any remaining local object URLs on unmount.
 	useEffect(
 		() => () => {
 			setPhotos((prev) => {
-				for (const p of prev) URL.revokeObjectURL(p.preview);
+				for (const p of prev)
+					if (p.kind === "new") URL.revokeObjectURL(p.preview);
 				return prev;
 			});
 		},
@@ -99,6 +124,7 @@ export function AddPortfolioModal({
 					continue;
 				}
 				next.push({
+					kind: "new",
 					id: newLocalId(),
 					file,
 					preview: URL.createObjectURL(file),
@@ -113,7 +139,8 @@ export function AddPortfolioModal({
 	function removePhoto(id: string) {
 		setPhotos((prev) => {
 			const target = prev.find((p) => p.id === id);
-			if (target) URL.revokeObjectURL(target.preview);
+			if (target?.kind === "new") URL.revokeObjectURL(target.preview);
+			if (target?.kind === "existing") setDeletedIds((d) => [...d, id]);
 			const next = prev.filter((p) => p.id !== id);
 			setCoverId((c) => (c === id ? (next[0]?.id ?? null) : c));
 			return next;
@@ -132,41 +159,59 @@ export function AddPortfolioModal({
 		}
 		setSaving(true);
 		try {
-			// Upload every photo to storage via the presigned flow, in parallel.
+			// Upload only the newly-picked photos (existing ones already have keys).
+			// The S3 PUT isn't routed through the API client (so not auto-toasted);
+			// surface an upload failure here and stop.
+			const newPhotos = photos.filter((p) => p.kind === "new");
 			const keyById = new Map<string, string>();
-			await Promise.all(
-				photos.map(async (p) => {
-					keyById.set(p.id, await uploadImageViaPresign(p.file, "portfolio"));
-				}),
-			);
-			const keys = photos.map((p) => keyById.get(p.id) as string);
-			const coverPhoto = coverId ? keyById.get(coverId) : undefined;
+			try {
+				await Promise.all(
+					newPhotos.map(async (p) => {
+						keyById.set(p.id, await uploadImageViaPresign(p.file, "portfolio"));
+					}),
+				);
+			} catch {
+				toastError(UI_MESSAGES.photosUploadFailed);
+				return;
+			}
 
-			const entry = await createPortfolio({
+			// The cover is either an existing media id or one of the new keys.
+			const coverIsNew = newPhotos.some((p) => p.id === coverId);
+			const coverPhoto =
+				coverId && coverIsNew ? keyById.get(coverId) : undefined;
+			const coverImageId = coverId && !coverIsNew ? coverId : undefined;
+			const newKeys = newPhotos.map((p) => keyById.get(p.id) as string);
+
+			const common = {
 				title: title.trim(),
-				address: address.trim() || undefined,
-				locality: locality.trim() || undefined,
-				city: city.trim() || undefined,
-				state: state.trim() || undefined,
-				pincode: pincode.trim() || undefined,
-				photos: keys,
-				coverPhoto,
-			});
-			onSaved(entry);
-			void present({
-				message: "Project added — it'll appear once approved.",
-				duration: 1800,
-				position: "top",
-				color: "success",
-			});
+				description: description.trim(),
+				category: category.trim(),
+				address: address.trim(),
+				locality: locality.trim(),
+				city: city.trim(),
+				state: state.trim(),
+				pincode: pincode.trim(),
+			};
+
+			const result =
+				isEdit && entry
+					? await updatePortfolio(entry.id, {
+							...common,
+							photos: newKeys,
+							deletedImageIds: deletedIds,
+							coverImageId,
+							coverPhoto,
+						})
+					: await createPortfolio({
+							...common,
+							photos: newKeys,
+							coverPhoto,
+						});
+			// Success is toasted centrally (portfolio.created / .updated).
+			onSaved(result);
 			onClose();
 		} catch {
-			void present({
-				message: "Couldn't add the project. Please try again.",
-				duration: 2000,
-				position: "top",
-				color: "danger",
-			});
+			// Failures are toasted centrally; keep the sheet open to retry.
 		} finally {
 			setSaving(false);
 		}
@@ -183,7 +228,9 @@ export function AddPortfolioModal({
 					>
 						Cancel
 					</button>
-					<h2 className="m-0 text-base font-extrabold text-ink">Add Project</h2>
+					<h2 className="m-0 text-base font-extrabold text-ink">
+						{isEdit ? "Edit Project" : "Add Project"}
+					</h2>
 					<button
 						type="button"
 						onClick={save}
@@ -206,6 +253,27 @@ export function AddPortfolioModal({
 								}}
 								placeholder="e.g. Modern 3BHK Interior"
 								autoCapitalize="words"
+							/>
+						</div>
+
+						<div>
+							<span className={LABEL}>Category (optional)</span>
+							<TextField
+								value={category}
+								onChange={setCategory}
+								placeholder="e.g. Interior Design"
+								autoCapitalize="words"
+							/>
+						</div>
+
+						<div>
+							<span className={LABEL}>Description (optional)</span>
+							<TextField
+								value={description}
+								onChange={setDescription}
+								placeholder="Describe the project"
+								multiline
+								rows={3}
 							/>
 						</div>
 
@@ -267,6 +335,7 @@ export function AddPortfolioModal({
 							<div className="flex flex-wrap gap-2.5">
 								{photos.map((photo) => {
 									const isCover = photo.id === coverId;
+									const src = photo.kind === "new" ? photo.preview : photo.url;
 									return (
 										<div key={photo.id} className="relative h-20 w-20">
 											<button
@@ -278,7 +347,7 @@ export function AddPortfolioModal({
 												}`}
 											>
 												<img
-													src={photo.preview}
+													src={src}
 													alt=""
 													className="h-full w-full object-cover"
 												/>
@@ -325,6 +394,8 @@ export function AddPortfolioModal({
 						>
 							{saving ? (
 								<IonSpinner name="crescent" className="h-5 w-5" />
+							) : isEdit ? (
+								"Save Changes"
 							) : (
 								"Add Project"
 							)}

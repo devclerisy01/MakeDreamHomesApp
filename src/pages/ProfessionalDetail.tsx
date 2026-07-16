@@ -1,5 +1,10 @@
 import { IonContent, IonIcon, IonPage } from "@ionic/react";
-import { alertCircleOutline, locationOutline } from "ionicons/icons";
+import {
+	alertCircleOutline,
+	briefcaseOutline,
+	locationOutline,
+	starOutline,
+} from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -10,9 +15,13 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { ReadMoreText } from "@/components/common/ReadMoreText";
 import { DetailSkeleton } from "@/components/common/Skeletons";
 import { SaveButton } from "@/components/common/SaveButton";
+import { WriteReviewModal } from "@/components/profile/WriteReviewModal";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
 import { getProfessionalDetail } from "@/lib/api/professionals";
+import { hasReviewed } from "@/lib/api/reviews";
+import { useLogin } from "@/lib/auth/login-gate";
+import { useAuth } from "@/lib/auth/session";
 import {
 	CARD,
 	PORTFOLIO_GRID,
@@ -20,19 +29,34 @@ import {
 	SECTION_TITLE,
 	TAG_PRIMARY,
 } from "@/lib/ui";
-import type { ProfessionalDetail as ProDetail } from "@/types";
+import type {
+	DirectoryCategoryId,
+	ProfessionalDetail as ProDetail,
+} from "@/types";
 
 type Status = "loading" | "ready" | "notfound";
 
+/** Showcase section heading by track (dealers show Properties, suppliers Products). */
+const SHOWCASE_TITLE: Record<DirectoryCategoryId, string> = {
+	professionals: "Portfolio",
+	"property-dealers": "Properties",
+	"material-suppliers": "Products",
+};
+
 export default function ProfessionalDetail() {
 	const { slug } = useParams<{ slug: string }>();
+	const { isAuthed, user } = useAuth();
+	const { openLogin } = useLogin();
 	const [pro, setPro] = useState<ProDetail | null>(null);
 	const [status, setStatus] = useState<Status>("loading");
+	const [reviewOpen, setReviewOpen] = useState(false);
+	const [alreadyReviewed, setAlreadyReviewed] = useState(false);
 
 	useEffect(() => {
 		const controller = new AbortController();
 		setStatus("loading");
 		setPro(null);
+		setAlreadyReviewed(false);
 		getProfessionalDetail(slug, controller.signal)
 			.then((data) => {
 				if (controller.signal.aborted) return;
@@ -48,6 +72,32 @@ export default function ProfessionalDetail() {
 			});
 		return () => controller.abort();
 	}, [slug]);
+
+	// Whether the signed-in viewer has already reviewed this professional (hides
+	// the Write-a-Review trigger).
+	const isOwnProfile = Boolean(
+		pro && user && String(user.id) === String(pro.id),
+	);
+	useEffect(() => {
+		if (!isAuthed || !pro || isOwnProfile) return;
+		let active = true;
+		hasReviewed(pro.id)
+			.then((reviewed) => {
+				if (active) setAlreadyReviewed(reviewed);
+			})
+			.catch(() => {});
+		return () => {
+			active = false;
+		};
+	}, [isAuthed, pro, isOwnProfile]);
+
+	function onWriteReview() {
+		if (!isAuthed) {
+			openLogin();
+			return;
+		}
+		setReviewOpen(true);
+	}
 
 	return (
 		<IonPage>
@@ -98,6 +148,23 @@ export default function ProfessionalDetail() {
 											</div>
 										</div>
 									) : null}
+									{pro.experienceYears > 0 ? (
+										<div className="mt-2.5 flex items-start gap-1.5">
+											<IonIcon
+												icon={briefcaseOutline}
+												className="mt-0.5 shrink-0 text-[17px] text-muted-light"
+											/>
+											<div className="min-w-0">
+												<span className="block text-[11px] font-semibold text-muted-light">
+													Experience
+												</span>
+												<span className="text-[13.5px] font-bold text-ink">
+													{pro.experienceYears}{" "}
+													{pro.experienceYears === 1 ? "year" : "years"}
+												</span>
+											</div>
+										</div>
+									) : null}
 									{pro.about?.length ? (
 										<div className="mt-2.5">
 											<span className="mb-0.5 block text-xs font-bold text-muted-light">
@@ -117,7 +184,9 @@ export default function ProfessionalDetail() {
 							{pro.portfolio?.length ? (
 								<section className="mt-[22px]">
 									<div className={SECTION_HEAD}>
-										<h2 className={SECTION_TITLE}>Portfolio</h2>
+										<h2 className={SECTION_TITLE}>
+											{SHOWCASE_TITLE[pro.category] ?? "Portfolio"}
+										</h2>
 									</div>
 									<div className={PORTFOLIO_GRID}>
 										{pro.portfolio.map((item) => (
@@ -127,17 +196,46 @@ export default function ProfessionalDetail() {
 								</section>
 							) : null}
 
-							{pro.reviewsCount > 0 && pro.reviewsBreakdown ? (
-								<div className="mt-[22px]">
+							<section className="mt-[22px]">
+								<div className={SECTION_HEAD}>
+									<h2 className={SECTION_TITLE}>Rating &amp; Reviews</h2>
+									{!isOwnProfile && !alreadyReviewed ? (
+										<button
+											type="button"
+											onClick={onWriteReview}
+											className="inline-flex items-center gap-1 text-sm font-bold text-primary"
+										>
+											<IonIcon icon={starOutline} className="text-base" />
+											Write a Review
+										</button>
+									) : null}
+								</div>
+								{(pro.reviewsCount ?? 0) > 0 && pro.reviewsBreakdown ? (
 									<RatingBreakdown
 										breakdown={pro.reviewsBreakdown}
 										count={pro.reviewsCount}
 									/>
-								</div>
-							) : null}
+								) : (
+									<p className="m-0 rounded-2xl border border-dashed border-line bg-surface-muted px-4 py-6 text-center text-[13px] text-muted-light">
+										No reviews yet.
+										{!isOwnProfile && !alreadyReviewed
+											? " Be the first to review."
+											: ""}
+									</p>
+								)}
+							</section>
 						</>
 					)}
 				</Container>
+				{pro ? (
+					<WriteReviewModal
+						reviewForId={pro.id}
+						name={pro.name}
+						isOpen={reviewOpen}
+						onClose={() => setReviewOpen(false)}
+						onSubmitted={() => setAlreadyReviewed(true)}
+					/>
+				) : null}
 			</IonContent>
 		</IonPage>
 	);

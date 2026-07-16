@@ -48,6 +48,18 @@ import {
 import { LIST_GRID } from "@/lib/ui";
 import type { DirectoryCategoryId } from "@/types";
 
+const SORT_GROUP: FilterGroup = {
+	key: "sort",
+	label: "Sort by",
+	header: "Sort by",
+	multi: false,
+	options: [
+		{ value: "latest", label: "Latest" },
+		{ value: "topRated", label: "Top Rated" },
+		{ value: "experienced", label: "Most Experienced" },
+	],
+};
+
 const RATINGS_GROUP: FilterGroup = {
 	key: "flags",
 	label: "Ratings",
@@ -97,6 +109,7 @@ export default function Professionals() {
 	}, [category]);
 
 	const typeId = selection.type?.[0];
+	const sort = selection.sort?.[0];
 	const places = useMemo(() => placesOf(selection), [selection]);
 	const flags = useMemo(() => selection.flags ?? [], [selection]);
 	const activeFilterCount = useMemo(
@@ -127,16 +140,18 @@ export default function Professionals() {
 				search,
 				professionalUserType: category === "professionals" ? typeId : undefined,
 				productType: category === "material-suppliers" ? typeId : undefined,
+				hasReviews: flags.includes("hasReviews"),
+				hasPortfolio: flags.includes("hasPortfolio"),
 			},
 			controller.signal,
 		)
 			.then(setLocations)
 			.catch(() => {});
 		return () => controller.abort();
-	}, [filtersOpen, category, search, typeId]);
+	}, [filtersOpen, category, search, typeId, flags]);
 
 	const groups = useMemo<FilterGroup[]>(() => {
-		const list: FilterGroup[] = [];
+		const list: FilterGroup[] = [SORT_GROUP];
 		const typeLabel = TYPE_LABEL[category];
 		if (typeLabel && categories.length) {
 			list.push({
@@ -173,6 +188,7 @@ export default function Professionals() {
 				{
 					category,
 					search,
+					sort,
 					page,
 					limit: LISTING_PAGE_SIZE,
 					professionalUserType:
@@ -185,7 +201,7 @@ export default function Professionals() {
 				},
 				signal,
 			),
-		[category, search, typeId, places, flags],
+		[category, search, sort, typeId, places, flags],
 	);
 	const { items, status, hasMore, loadMore, reload } = usePagedList(
 		fetcher,

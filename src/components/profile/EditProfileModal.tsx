@@ -1,4 +1,4 @@
-import { IonIcon, IonModal, IonSpinner, useIonToast } from "@ionic/react";
+import { IonIcon, IonModal, IonSpinner } from "@ionic/react";
 import { cameraOutline } from "ionicons/icons";
 import { type ChangeEvent, useEffect, useState } from "react";
 
@@ -6,6 +6,7 @@ import { AddressAutocomplete } from "@/components/common/AddressAutocomplete";
 import { CategoryChips } from "@/components/common/CategoryChips";
 import { TextField } from "@/components/common/TextField";
 import { Avatar } from "@/components/common/Avatar";
+import { UI_MESSAGES } from "@/constants/messages";
 import {
 	type AuthUser,
 	updateProfile,
@@ -16,6 +17,7 @@ import {
 	getMaterialCategories,
 	getProfessionalCategories,
 } from "@/lib/api/misc";
+import { toastError, toastInfo } from "@/lib/api/toast";
 import { setStoredUser } from "@/lib/auth/session";
 
 const GENDERS = [
@@ -47,17 +49,18 @@ export function EditProfileModal({
 	onClose,
 	onSaved,
 }: EditProfileModalProps) {
-	const [present] = useIonToast();
-
 	const isBusiness = user.userType !== "person";
 	const isProfessional = user.userType === "professional";
 	const isSupplier = user.userType === "supplier";
+	const isDealer = user.userType === "dealer";
 
 	const [firstName, setFirstName] = useState("");
 	const [lastName, setLastName] = useState("");
 	const [gender, setGender] = useState("");
 	const [businessName, setBusinessName] = useState("");
 	const [businessGstin, setBusinessGstin] = useState("");
+	const [isReraCertified, setIsReraCertified] = useState(false);
+	const [reraNumber, setReraNumber] = useState("");
 	const [experience, setExperience] = useState("");
 	const [address, setAddress] = useState("");
 	const [locality, setLocality] = useState("");
@@ -87,15 +90,17 @@ export function EditProfileModal({
 		setLastName(user.lastName ?? "");
 		setGender(user.gender ?? "");
 		setBusinessName(user.businessName ?? "");
-		setBusinessGstin("");
+		setBusinessGstin(user.businessGstin ?? "");
+		setIsReraCertified(user.isReraCertified ?? false);
+		setReraNumber(user.reraNumber ?? "");
 		setExperience(user.experience ?? "");
 		setAddress(user.address ?? "");
 		setLocality(user.locality ?? "");
 		setCity(user.city ?? "");
 		setState(user.state ?? "");
 		setPincode(user.pincode ?? "");
-		setLatitude("");
-		setLongitude("");
+		setLatitude(user.latitude ?? "");
+		setLongitude(user.longitude ?? "");
 		setAbout(user.about ?? "");
 		setPhotoPreview(user.profilePhoto ?? null);
 		setPhotoKey(null);
@@ -134,19 +139,11 @@ export function EditProfileModal({
 		event.target.value = "";
 		if (!file) return;
 		if (!file.type.startsWith("image/")) {
-			void present({
-				message: "Please choose an image file.",
-				duration: 1600,
-				position: "bottom",
-			});
+			toastInfo(UI_MESSAGES.imageOnly);
 			return;
 		}
 		if (file.size > MAX_PHOTO_SIZE) {
-			void present({
-				message: "Image must be 5 MB or smaller.",
-				duration: 1600,
-				position: "bottom",
-			});
+			toastInfo(UI_MESSAGES.imageTooLarge);
 			return;
 		}
 		// Show the picked file immediately via a local object URL while the
@@ -160,12 +157,7 @@ export function EditProfileModal({
 		} catch {
 			setPhotoPreview(user.profilePhoto ?? null);
 			setPhotoKey(null);
-			void present({
-				message: "Couldn't upload the photo. Try again.",
-				duration: 1800,
-				position: "bottom",
-				color: "danger",
-			});
+			toastError(UI_MESSAGES.photoUploadFailed);
 		} finally {
 			setUploading(false);
 		}
@@ -173,6 +165,16 @@ export function EditProfileModal({
 
 	async function save() {
 		if (saving) return;
+		// A RERA-certified dealer must supply their RERA number (mirrors the web).
+		if (isDealer && isReraCertified && !reraNumber.trim()) {
+			toastError(UI_MESSAGES.reraRequired);
+			return;
+		}
+		// A supplier must keep at least one product category (mirrors the web).
+		if (isSupplier && productIds.length === 0) {
+			toastError(UI_MESSAGES.productRequired);
+			return;
+		}
 		setSaving(true);
 		try {
 			const updated = await updateProfile({
@@ -193,9 +195,15 @@ export function EditProfileModal({
 				...(isBusiness
 					? {
 							businessName: businessName.trim(),
-							...(businessGstin.trim()
-								? { businessGstin: businessGstin.trim() }
-								: {}),
+							// Always send GSTIN (empty string clears it).
+							businessGstin: businessGstin.trim(),
+						}
+					: {}),
+				...(isDealer
+					? {
+							isReraCertified,
+							// Clear the number when un-certified (mirrors the web).
+							reraNumber: isReraCertified ? reraNumber.trim() : "",
 						}
 					: {}),
 				...(isProfessional
@@ -208,20 +216,10 @@ export function EditProfileModal({
 			});
 			setStoredUser(updated);
 			onSaved(updated);
-			void present({
-				message: "Profile updated.",
-				duration: 1400,
-				position: "top",
-				color: "success",
-			});
+			// Success is toasted centrally (profile.updated).
 			onClose();
 		} catch {
-			void present({
-				message: "Couldn't save your profile. Please try again.",
-				duration: 2000,
-				position: "top",
-				color: "danger",
-			});
+			// Save failures are toasted centrally; keep the sheet open to retry.
 		} finally {
 			setSaving(false);
 		}
@@ -337,6 +335,35 @@ export function EditProfileModal({
 									/>
 								</div>
 							</>
+						) : null}
+
+						{isDealer ? (
+							<div>
+								<label className="flex items-center gap-2.5">
+									<input
+										type="checkbox"
+										checked={isReraCertified}
+										onChange={(event) =>
+											setIsReraCertified(event.target.checked)
+										}
+										className="h-4 w-4 accent-primary"
+									/>
+									<span className="text-sm font-semibold text-ink">
+										RERA certified
+									</span>
+								</label>
+								{isReraCertified ? (
+									<div className="mt-2">
+										<span className={LABEL}>RERA number</span>
+										<TextField
+											value={reraNumber}
+											onChange={setReraNumber}
+											placeholder="RERA registration number"
+											autoCapitalize="none"
+										/>
+									</div>
+								) : null}
+							</div>
 						) : null}
 
 						{isProfessional ? (

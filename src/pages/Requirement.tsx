@@ -5,7 +5,6 @@ import {
 	IonPage,
 	IonSpinner,
 	useIonRouter,
-	useIonToast,
 } from "@ionic/react";
 import {
 	arrowForward,
@@ -25,6 +24,7 @@ import { CategoryChips } from "@/components/common/CategoryChips";
 import { TextField } from "@/components/common/TextField";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
+import { UI_MESSAGES } from "@/constants/messages";
 import { ROUTES } from "@/constants/routes";
 import {
 	checkPhone,
@@ -43,6 +43,7 @@ import {
 	getProfessionalCategories,
 } from "@/lib/api/misc";
 import type { AddressResult } from "@/lib/api/places";
+import { toastError, toastInfo } from "@/lib/api/toast";
 import { useLogin } from "@/lib/auth/login-gate";
 import { storeSession, useAuth } from "@/lib/auth/session";
 import { CARD } from "@/lib/ui";
@@ -73,6 +74,7 @@ const PROPERTY_GROUPS = [
 const RESIDENTIAL_TYPES = [
 	{ value: "plot", label: "Plot" },
 	{ value: "flat", label: "Flat" },
+	{ value: "kothi", label: "Kothi" },
 ];
 
 const MAX_FILES = 5;
@@ -123,7 +125,6 @@ const CHIP_OFF = "border-line bg-white text-muted";
  */
 export default function Requirement() {
 	const router = useIonRouter();
-	const [present] = useIonToast();
 	const { isAuthed } = useAuth();
 	const { openLogin } = useLogin();
 
@@ -154,6 +155,7 @@ export default function Requirement() {
 	const [materialOptions, setMaterialOptions] = useState<CategoryOption[]>([]);
 	const [categoryError, setCategoryError] = useState<string | null>(null);
 	const [descriptionError, setDescriptionError] = useState<string | null>(null);
+	const [addressError, setAddressError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const [listening, setListening] = useState(false);
 	const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -203,6 +205,24 @@ export default function Requirement() {
 	function chooseType(next: RequirementType) {
 		setType(next);
 		setCategoryError(null);
+		// Switching track clears any track-specific selections + the "Other"
+		// buffer so stale picks/text don't carry across (mirrors the web).
+		setProCats([]);
+		setMaterialCats([]);
+		setOtherActive(false);
+		setOtherCategory("");
+		setPropertyGroup("");
+		setPropertyType("");
+		setPlaceName("");
+	}
+
+	/** Switch hire↔available; clears the professional picks + "Other" buffer. */
+	function chooseProIntent(next: ProIntent) {
+		setProIntent(next);
+		setCategoryError(null);
+		setProCats([]);
+		setOtherActive(false);
+		setOtherCategory("");
 	}
 
 	function onFilesChange(event: ChangeEvent<HTMLInputElement>) {
@@ -246,11 +266,7 @@ export default function Requirement() {
 	function toggleSpeech() {
 		const SpeechRecognition = getSpeechRecognition();
 		if (!SpeechRecognition) {
-			void present({
-				message: "Voice input isn't available on this device.",
-				duration: 1800,
-				position: "bottom",
-			});
+			toastInfo(UI_MESSAGES.voiceUnavailable);
 			return;
 		}
 		if (listening) {
@@ -334,8 +350,14 @@ export default function Requirement() {
 			setCategoryError("Select a property type.");
 			invalid = true;
 		}
-		if (!description.trim()) {
-			setDescriptionError("Please describe your requirement.");
+		if (description.trim().length < 20) {
+			setDescriptionError(
+				"Please describe your requirement in at least 20 characters.",
+			);
+			invalid = true;
+		}
+		if (!(addressMeta?.address || address).trim()) {
+			setAddressError("Please add your location.");
 			invalid = true;
 		}
 		return !invalid;
@@ -348,19 +370,25 @@ export default function Requirement() {
 		try {
 			let imageUrl: string | undefined;
 			if (showAttachment && attachments.length > 0) {
-				const keys = await Promise.all(
-					attachments.map((item) => uploadLeadAttachment(item.file)),
-				);
-				imageUrl = keys.join(",");
+				try {
+					const keys = await Promise.all(
+						attachments.map((item) => uploadLeadAttachment(item.file)),
+					);
+					imageUrl = keys.join(",");
+				} catch {
+					// The S3 PUT isn't routed through the API client, so it isn't
+					// auto-toasted — surface the failure here and stop.
+					toastError(UI_MESSAGES.imagesUploadFailed);
+					return;
+				}
 			}
 			await createRequirement({
 				type,
 				intent: type === "professional" ? undefined : intent,
+				proIntent: type === "professional" ? proIntent : undefined,
 				categories: type === "property" ? undefined : selectedCategoryNames(),
-				propertyRequirement:
-					type === "property"
-						? [propertyGroup, propertyType].filter(Boolean).join(",")
-						: undefined,
+				propertyGroup: type === "property" ? propertyGroup : undefined,
+				propertyType: type === "property" ? propertyType : undefined,
 				placeName:
 					type === "property" && intent === "sell" ? placeName : undefined,
 				description,
@@ -374,21 +402,11 @@ export default function Requirement() {
 				price: priceUnsure ? "" : price,
 				imageUrl,
 			});
-			void present({
-				message: "Requirement posted successfully.",
-				duration: 1600,
-				position: "top",
-				color: "success",
-			});
+			// Success is toasted centrally (leads.requirementSubmitted).
 			resetForm();
 			router.push(ROUTES.leads, "root");
 		} catch {
-			void present({
-				message: "Couldn't post your requirement. Please try again.",
-				duration: 2000,
-				position: "top",
-				color: "danger",
-			});
+			// createRequirement failures are toasted centrally; nothing to add.
 		} finally {
 			setSubmitting(false);
 		}
@@ -420,11 +438,7 @@ export default function Requirement() {
 			const { exists } = await checkPhone(phone);
 			if (exists) {
 				setPhoneError("This phone number is already registered.");
-				void present({
-					message: "This number already has an account. Please sign in.",
-					duration: 2200,
-					position: "top",
-				});
+				toastInfo(UI_MESSAGES.numberRegistered);
 				openLogin({ phone });
 				return;
 			}
@@ -707,8 +721,10 @@ export default function Requirement() {
 										</div>
 									) : null}
 
-									{/* Society / commercial name applies to a SELL requirement only. */}
-									{intent === "sell" && propertyGroup === "residential" ? (
+									{/* Society name applies to a residential FLAT sell only. */}
+									{intent === "sell" &&
+									propertyGroup === "residential" &&
+									propertyType === "flat" ? (
 										<div className="mt-3">
 											<span className="mb-1.5 block text-sm font-semibold text-ink">
 												Society name
@@ -762,7 +778,7 @@ export default function Requirement() {
 														key={option.value}
 														type="button"
 														aria-pressed={proIntent === option.value}
-														onClick={() => setProIntent(option.value)}
+														onClick={() => chooseProIntent(option.value)}
 														className={`${CHIP} ${
 															proIntent === option.value ? CHIP_ON : CHIP_OFF
 														}`}
@@ -786,6 +802,9 @@ export default function Requirement() {
 									<CategoryChips
 										options={type === "material" ? materialOptions : proOptions}
 										selected={type === "material" ? materialCats : proCats}
+										single={
+											type === "professional" && proIntent === "available"
+										}
 										error={categoryError}
 										onChange={(ids) => {
 											if (type === "material") setMaterialCats(ids);
@@ -892,12 +911,17 @@ export default function Requirement() {
 								setAddress(value);
 								// Editing by hand invalidates the last resolved selection.
 								setAddressMeta(null);
+								if (addressError) setAddressError(null);
 							}}
 							onSelect={(result) => {
 								setAddress(result.full);
 								setAddressMeta(result);
+								if (addressError) setAddressError(null);
 							}}
 						/>
+						{addressError ? (
+							<p className="mt-1.5 text-sm text-danger">{addressError}</p>
+						) : null}
 
 						<span className="mb-1.5 mt-4 block text-sm font-semibold text-ink">
 							Estimated price

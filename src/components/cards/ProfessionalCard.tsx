@@ -92,7 +92,7 @@ export function ProfessionalCard({
 										<img
 											key={thumb.id}
 											src={getImageSrc(thumb)}
-											alt={thumb.title}
+											alt={thumb.title ?? "Project image"}
 											loading="lazy"
 											className="h-7 w-8 rounded-[5px] bg-surface-muted object-cover"
 										/>

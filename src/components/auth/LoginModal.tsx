@@ -1,10 +1,12 @@
-import { IonIcon, IonSpinner, useIonToast } from "@ionic/react";
+import { IonIcon, IonSpinner } from "@ionic/react";
 import { arrowForward, closeOutline } from "ionicons/icons";
 import { type FormEvent, useState } from "react";
 
 import { OtpVerify } from "@/components/auth/OtpVerify";
 import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
+import { UI_MESSAGES } from "@/constants/messages";
 import { checkPhone, otpLogin, requestOtp } from "@/lib/api/auth";
+import { toastError, toastInfo, toastSuccess } from "@/lib/api/toast";
 import { storeSession } from "@/lib/auth/session";
 
 interface LoginPanelProps {
@@ -29,8 +31,6 @@ export function LoginPanel({
 	onAuthenticated,
 	onSwitchToSignup,
 }: LoginPanelProps) {
-	const [present] = useIonToast();
-
 	const [view, setView] = useState<"phone" | "otp">("phone");
 	const [phone, setPhone] = useState(
 		() => initialPhone?.replace(/\D/g, "").slice(0, PHONE_DIGITS) ?? "",
@@ -53,11 +53,7 @@ export function LoginPanel({
 		try {
 			const { exists } = await checkPhone(phone);
 			if (!exists) {
-				void present({
-					message: "This number isn't registered. Let's create your account.",
-					duration: 2200,
-					position: "top",
-				});
+				toastInfo(UI_MESSAGES.notRegistered);
 				onSwitchToSignup(phone);
 				return;
 			}
@@ -79,12 +75,7 @@ export function LoginPanel({
 		try {
 			const result = await otpLogin({ phone, code, verificationId });
 			storeSession(result);
-			void present({
-				message: "Signed in successfully.",
-				duration: 1500,
-				position: "top",
-				color: "success",
-			});
+			toastSuccess(UI_MESSAGES.signedIn);
 			onAuthenticated();
 			return true;
 		} catch {
@@ -99,19 +90,10 @@ export function LoginPanel({
 		try {
 			const otp = await requestOtp(phone);
 			setVerificationId(otp.verificationId);
-			void present({
-				message: "A new code has been sent.",
-				duration: 1500,
-				position: "top",
-			});
+			toastInfo(UI_MESSAGES.codeSent);
 			return otp.resendAfter;
 		} catch {
-			void present({
-				message: "Couldn't resend the code. Try again shortly.",
-				duration: 1800,
-				position: "top",
-				color: "danger",
-			});
+			toastError(UI_MESSAGES.codeResendFailed);
 			throw new Error("resend failed");
 		}
 	}

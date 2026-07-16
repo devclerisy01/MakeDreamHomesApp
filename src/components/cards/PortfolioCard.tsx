@@ -13,20 +13,22 @@ export function PortfolioCard({ item }: { item: PortfolioItem }) {
 				{src ? (
 					<img
 						src={src}
-						alt={item.title}
+						alt={item.title ?? "Portfolio image"}
 						loading="lazy"
 						className="h-full w-full object-cover"
 					/>
 				) : null}
 			</div>
 			<div className="px-3 py-2.5">
-				<h4 className="m-0 line-clamp-2 text-[13.5px] font-bold leading-snug text-ink">
-					{item.title}
-				</h4>
-				{item.city ? (
+				{item.title ? (
+					<h4 className="m-0 line-clamp-2 text-[13.5px] font-bold leading-snug text-ink">
+						{item.title}
+					</h4>
+				) : null}
+				{(item.city ?? item.location) ? (
 					<span className={`mt-[3px] ${META}`}>
 						<IonIcon icon={locationOutline} className="shrink-0 text-[15px]" />
-						{item.city}
+						{item.city ?? item.location}
 					</span>
 				) : null}
 			</div>
