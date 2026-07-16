@@ -67,6 +67,10 @@ import {
 import iconInfo from "@/assets/icons/info.svg";
 import iconLocation from "@/assets/icons/location.svg";
 import iconMenu from "@/assets/icons/menu.svg";
+import iconMicSolid from "@/assets/icons/mic-solid.svg";
+import iconReqMaterial from "@/assets/icons/req-material.svg";
+import iconReqProfessionals from "@/assets/icons/req-professionals.svg";
+import iconReqProperty from "@/assets/icons/req-property.svg";
 import iconNotifications from "@/assets/icons/notifications.svg";
 import iconSparkles from "@/assets/icons/sparkles.svg";
 import iconStarFill from "@/assets/icons/star-fill.svg";
@@ -96,6 +100,13 @@ export const ICONS = {
 	search: search,
 	/** Voice input affordance. */
 	mic: micOutline,
+	/** Solid mic glyph for the "Tap to Speak" pill (custom Figma). */
+	micSolid: iconMicSolid,
+
+	// ── Requirement type cards (custom Figma glyphs) ────────────────────
+	reqProfessionals: iconReqProfessionals, // hard-hat
+	reqProperty: iconReqProperty, // house
+	reqMaterial: iconReqMaterial, // stacked blocks
 
 	// ── Bottom tab bar ──────────────────────────────────────────────────
 	tabHome: iconTabHome, // custom

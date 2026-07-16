@@ -30,7 +30,7 @@ const GEO_OPTIONS: PositionOptions = {
 };
 
 const FIELD =
-	"w-full rounded-xl border bg-white px-3.5 py-3 font-sans text-base text-ink outline-none transition-colors placeholder:text-muted-light focus:border-primary";
+	"w-full rounded-xl border bg-white px-3.5 py-3 font-sans text-[12px] text-ink outline-none transition-colors placeholder:text-muted-light focus:border-primary";
 
 /** A v4 UUID when available, else a random hex string, else a timestamp — only
  *  groups Places billing sessions, so uniqueness isn't security-critical. */
@@ -208,7 +208,7 @@ export function AddressAutocomplete({
 				) : null}
 			</div>
 
-			{error ? <p className="mt-1.5 text-sm text-danger">{error}</p> : null}
+			{error ? <p className="mt-1.5 text-[11px] text-danger">{error}</p> : null}
 
 			{open && suggestions.length > 0 ? (
 				<div className="absolute inset-x-0 z-50 mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-line bg-white p-1.5 shadow-lg">

@@ -12,7 +12,7 @@ interface TextFieldProps {
 }
 
 const FIELD =
-	"w-full rounded-[9px] border bg-white px-3.5 py-3 font-sans text-[14px] text-ink outline-none transition-colors placeholder:font-medium placeholder:text-[#c4c7cc] focus:border-primary disabled:opacity-60";
+	"w-full rounded-[9px] border bg-white px-3.5 py-3 font-sans text-[12px] text-ink outline-none transition-colors placeholder:font-medium placeholder:text-[#c4c7cc] focus:border-primary disabled:opacity-60";
 
 /** Styled text input / textarea matching the auth form fields. */
 export function TextField({
@@ -52,7 +52,7 @@ export function TextField({
 					onChange={(event) => onChange(event.target.value)}
 				/>
 			)}
-			{error ? <p className="mt-1.5 text-sm text-danger">{error}</p> : null}
+			{error ? <p className="mt-1.5 text-[11px] text-danger">{error}</p> : null}
 		</div>
 	);
 }

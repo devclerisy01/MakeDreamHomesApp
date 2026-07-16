@@ -356,7 +356,7 @@ export function SignupPanel({
 								</span>
 							</button>
 							{termsError ? (
-								<p className="mt-1.5 text-sm text-danger">{termsError}</p>
+								<p className="mt-1.5 text-[11px] text-danger">{termsError}</p>
 							) : null}
 						</div>
 

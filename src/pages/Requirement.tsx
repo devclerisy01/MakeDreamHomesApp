@@ -6,15 +6,6 @@ import {
 	IonSpinner,
 	useIonRouter,
 } from "@ionic/react";
-import {
-	arrowForward,
-	closeOutline,
-	constructOutline,
-	cubeOutline,
-	homeOutline,
-	imageOutline,
-	micOutline,
-} from "ionicons/icons";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { OtpVerify } from "@/components/auth/OtpVerify";
@@ -47,6 +38,7 @@ import { toastError, toastInfo } from "@/lib/api/toast";
 import { useLogin } from "@/lib/auth/login-gate";
 import { storeSession, useAuth } from "@/lib/auth/session";
 import { CARD } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
 
 type Intent = "buy" | "sell";
 type ProIntent = "hire" | "available";
@@ -54,11 +46,11 @@ type ProIntent = "hire" | "available";
 const OPTIONS: { type: RequirementType; label: string; icon: string }[] = [
 	{
 		type: "professional",
-		label: "Professional Services",
-		icon: constructOutline,
+		label: "Professionals",
+		icon: ICONS.reqProfessionals,
 	},
-	{ type: "property", label: "Buy / Sell Properties", icon: homeOutline },
-	{ type: "material", label: "Material Suppliers", icon: cubeOutline },
+	{ type: "property", label: "Buy / Sell Properties", icon: ICONS.reqProperty },
+	{ type: "material", label: "Material Suppliers", icon: ICONS.reqMaterial },
 ];
 
 const PRO_INTENTS: { value: ProIntent; label: string }[] = [
@@ -109,8 +101,8 @@ interface Attachment {
 }
 
 const CHIP =
-	"rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-colors";
-const CHIP_ON = "border-primary bg-primary text-white";
+	"rounded-full border px-[9px] py-1 text-[11px] font-semibold transition-colors";
+const CHIP_ON = "border-primary bg-[#f5f7fb] text-primary";
 const CHIP_OFF = "border-line bg-white text-muted";
 
 /**
@@ -509,7 +501,7 @@ export default function Requirement() {
 				: "Which materials do you need?";
 
 	const intentToggle = (
-		<div className="mb-3 inline-flex rounded-full border border-line bg-white p-0.5">
+		<div className="mb-4 inline-flex rounded-full border border-line bg-white p-0.5">
 			{(["buy", "sell"] as const).map((value) => (
 				<button
 					key={value}
@@ -528,51 +520,58 @@ export default function Requirement() {
 		</div>
 	);
 
-	const otherPicker = (
-		<div className="mt-2">
-			<button
-				type="button"
-				aria-pressed={otherActive}
-				onClick={() => {
-					setOtherActive((v) => !v);
-					if (otherActive) setOtherCategory("");
-					if (categoryError) setCategoryError(null);
-				}}
-				className={`${CHIP} ${otherActive ? CHIP_ON : CHIP_OFF}`}
-			>
-				Other
-			</button>
-			{otherActive ? (
-				<div className="mt-2">
-					<TextField
-						value={otherCategory}
-						onChange={setOtherCategory}
-						placeholder={
-							type === "material"
-								? "eg: wood, brick, sand"
-								: "eg: carpenter, plumber, electrician"
-						}
-						autoCapitalize="words"
-					/>
-				</div>
-			) : null}
-		</div>
+	// "Other" chip sits inline as the last chip of the category row; its free-text
+	// field (when active) drops below the whole chip group.
+	const otherChip = (
+		<button
+			type="button"
+			aria-pressed={otherActive}
+			onClick={() => {
+				setOtherActive((v) => !v);
+				if (otherActive) setOtherCategory("");
+				if (categoryError) setCategoryError(null);
+			}}
+			className={`${CHIP} ${otherActive ? CHIP_ON : CHIP_OFF}`}
+		>
+			Other
+		</button>
 	);
+	const otherField = otherActive ? (
+		<div className="mt-2">
+			<TextField
+				value={otherCategory}
+				onChange={setOtherCategory}
+				placeholder={
+					type === "material"
+						? "eg: wood, brick, sand"
+						: "eg: carpenter, plumber, electrician"
+				}
+				autoCapitalize="words"
+			/>
+		</div>
+	) : null;
 
 	return (
 		<IonPage>
-			<AppHeader title="Post Your Requirement" />
-			<IonContent>
+			<AppHeader title="Post Your Requirement" tinted />
+			<IonContent
+				style={
+					{
+						"--background":
+							"linear-gradient(180deg, #e8f3fc 0%, #f6f7fb 45%, #f6f7fb 100%)",
+					} as React.CSSProperties
+				}
+			>
 				<Container>
 					{/* Logged-out visitors sign up inline: their details are collected
 					    here and an account is created (via OTP) before the lead posts. */}
 					{!isAuthed ? (
 						<section className={`mb-4 p-4 ${CARD}`}>
 							<div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-								<h2 className="m-0 text-base font-bold text-ink">
+								<h2 className="m-0 text-[12px] font-bold text-ink">
 									Please enter your details.
 								</h2>
-								<p className="m-0 text-sm text-muted">
+								<p className="m-0 font-medium text-[11px] w-full text-muted">
 									Already have an account?{" "}
 									<button
 										type="button"
@@ -594,7 +593,7 @@ export default function Requirement() {
 								/>
 								<div className="grid grid-cols-2 gap-3">
 									<div>
-										<span className="mb-1.5 block text-sm font-semibold text-ink">
+										<span className="mb-1.5 block text-[12px] font-bold text-ink">
 											First name
 										</span>
 										<TextField
@@ -609,7 +608,7 @@ export default function Requirement() {
 										/>
 									</div>
 									<div>
-										<span className="mb-1.5 block text-sm font-semibold text-ink">
+										<span className="mb-1.5 block text-[12px] font-bold text-ink">
 											Last name
 										</span>
 										<TextField
@@ -625,11 +624,11 @@ export default function Requirement() {
 					) : null}
 
 					<section className={`p-4 ${CARD}`}>
-						<p className="m-0 text-sm font-semibold text-ink">
+						<p className="m-0 text-[12px] font-bold text-ink">
 							Choose the option that best matches your requirement.
 						</p>
 
-						<div className="mt-3 grid grid-cols-3 gap-2">
+						<div className="mt-3 grid grid-cols-3 gap-2.5">
 							{OPTIONS.map((option) => {
 								const selected = option.type === type;
 								return (
@@ -638,24 +637,26 @@ export default function Requirement() {
 										type="button"
 										aria-pressed={selected}
 										onClick={() => chooseType(option.type)}
-										className={`flex flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors ${
+										className={`flex h-[92px] flex-col items-start justify-between rounded-[6px] border p-3 text-left transition-colors ${
 											selected
-												? "border-primary bg-primary-light/50"
-												: "border-line bg-white"
+												? "border-primary bg-[#f5f7fb]"
+												: "border-[#e3e6f0] bg-white"
 										}`}
 									>
 										<span
-											className={`grid h-9 w-9 place-items-center rounded-lg ${
+											className={`grid h-8 w-8 place-items-center rounded-[3px] ${
 												selected
 													? "bg-primary text-white"
-													: "bg-surface-muted text-ink"
+													: "bg-[#f6f7fb] text-ink"
 											}`}
 										>
-											<IonIcon icon={option.icon} className="text-lg" />
+											<IonIcon icon={option.icon} className="text-[18px]" />
 										</span>
 										<span
-											className={`text-[12px] font-semibold leading-tight ${
-												selected ? "text-primary" : "text-ink"
+											className={`text-[11px] leading-tight ${
+												selected
+													? "font-semibold text-primary"
+													: "font-normal text-ink"
 											}`}
 										>
 											{option.label}
@@ -668,12 +669,12 @@ export default function Requirement() {
 						<div className="mt-4">
 							{type === "property" ? (
 								<>
-									<span className="mb-2 block text-sm font-semibold text-ink">
+									<span className="mb-2 block text-[12px] font-bold text-ink">
 										Are you buying or selling?
 									</span>
 									{intentToggle}
 
-									<span className="mb-2 block text-sm font-semibold text-ink">
+									<span className="mb-2 block text-[12px] font-bold text-ink">
 										Property Category
 									</span>
 									<div className="flex flex-wrap gap-2">
@@ -699,7 +700,7 @@ export default function Requirement() {
 
 									{propertyGroup === "residential" ? (
 										<div className="mt-3">
-											<span className="mb-2 block text-sm font-semibold text-ink">
+											<span className="mb-2 block text-[12px] font-bold text-ink">
 												Property type
 											</span>
 											<div className="flex flex-wrap gap-2">
@@ -728,7 +729,7 @@ export default function Requirement() {
 									propertyGroup === "residential" &&
 									propertyType === "flat" ? (
 										<div className="mt-3">
-											<span className="mb-1.5 block text-sm font-semibold text-ink">
+											<span className="mb-1.5 block text-[12px] font-bold text-ink">
 												Society name
 											</span>
 											<TextField
@@ -742,7 +743,7 @@ export default function Requirement() {
 
 									{intent === "sell" && propertyGroup === "commercial" ? (
 										<div className="mt-3">
-											<span className="mb-1.5 block text-sm font-semibold text-ink">
+											<span className="mb-1.5 block text-[12px] font-bold text-ink">
 												Commercial property name
 											</span>
 											<TextField
@@ -755,7 +756,7 @@ export default function Requirement() {
 									) : null}
 
 									{categoryError ? (
-										<p className="mt-1.5 text-sm text-danger">
+										<p className="mt-1.5 text-[11px] text-danger">
 											{categoryError}
 										</p>
 									) : null}
@@ -764,14 +765,14 @@ export default function Requirement() {
 								<>
 									{type === "material" ? (
 										<>
-											<span className="mb-2 block text-sm font-semibold text-ink">
+											<span className="mb-2 block text-[12px] font-bold text-ink">
 												Are you buying or selling material?
 											</span>
 											{intentToggle}
 										</>
 									) : (
 										<>
-											<span className="mb-2 block text-sm font-semibold text-ink">
+											<span className="mb-2 block text-[12px] font-bold text-ink">
 												Are you hiring, or offering your services?
 											</span>
 											<div className="mb-3 flex flex-wrap gap-2">
@@ -793,10 +794,12 @@ export default function Requirement() {
 									)}
 
 									<div className="mb-2 flex items-baseline gap-2">
-										<span className="text-sm font-semibold text-ink">
+										{/* Figma: Bold 10px, #000 */}
+										<span className="text-[12px] font-bold text-ink">
 											{categoryPrompt}
 										</span>
-										<span className="text-xs text-muted-light">
+										{/* Figma: Regular 8px, #6C6F7B */}
+										<span className="text-[10px] font-normal text-[#6c6f7b]">
 											select one or more
 										</span>
 									</div>
@@ -808,19 +811,20 @@ export default function Requirement() {
 											type === "professional" && proIntent === "available"
 										}
 										error={categoryError}
+										trailing={otherChip}
 										onChange={(ids) => {
 											if (type === "material") setMaterialCats(ids);
 											else setProCats(ids);
 											if (categoryError) setCategoryError(null);
 										}}
 									/>
-									{otherPicker}
+									{otherField}
 								</>
 							)}
 
 							{showAttachment ? (
 								<div className="mt-4">
-									<span className="mb-2 block text-sm font-semibold text-ink">
+									<span className="mb-2 block text-[12px] font-bold text-ink">
 										Upload images{" "}
 									</span>
 									<div className="flex flex-wrap gap-2">
@@ -840,13 +844,13 @@ export default function Requirement() {
 													aria-label="Remove photo"
 													className="absolute right-0.5 top-0.5 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-white"
 												>
-													<IonIcon icon={closeOutline} className="text-xs" />
+													<IonIcon icon={ICONS.close} className="text-xs" />
 												</button>
 											</div>
 										))}
 										{attachments.length < MAX_FILES ? (
 											<label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-line text-muted-light">
-												<IonIcon icon={imageOutline} className="text-xl" />
+												<IonIcon icon={ICONS.image} className="text-xl" />
 												<span className="text-[10px] font-semibold">Add</span>
 												<input
 													type="file"
@@ -859,7 +863,9 @@ export default function Requirement() {
 										) : null}
 									</div>
 									{fileError ? (
-										<p className="mt-1.5 text-sm text-danger">{fileError}</p>
+										<p className="mt-1.5 text-[11px] text-danger">
+											{fileError}
+										</p>
 									) : null}
 								</div>
 							) : null}
@@ -867,7 +873,7 @@ export default function Requirement() {
 					</section>
 
 					<section className={`mt-4 p-4 ${CARD}`}>
-						<h2 className="m-0 mb-3 text-base font-extrabold text-ink">
+						<h2 className="m-0 mb-3 text-[12px] font-bold text-ink">
 							Add Your Requirement
 						</h2>
 
@@ -880,28 +886,30 @@ export default function Requirement() {
 								}}
 								rows={4}
 								placeholder="Describe your requirement in detail or speech-to-text — Include quantity, budget, location, preferred brands, timeline or any other details."
-								className={`w-full resize-none rounded-xl border bg-white px-3.5 py-3 pb-12 font-sans text-sm text-ink outline-none placeholder:text-muted-light focus:border-primary ${
-									descriptionError ? "border-danger" : "border-line"
+								className={`w-full resize-none rounded-[9px] border bg-white px-3.5 py-3 pb-12 font-sans text-[12px] text-ink outline-none placeholder:font-medium placeholder:text-[#b2b8c2] focus:border-primary ${
+									descriptionError ? "border-danger" : "border-[#dae3ef]"
 								}`}
 							/>
 							<button
 								type="button"
 								onClick={toggleSpeech}
-								className={`absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+								className={`absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-[52px] px-3 py-1.5 text-[11px] font-bold ${
 									listening
 										? "bg-primary text-white"
-										: "bg-primary-light text-primary"
+										: "bg-[#edf2fb] text-primary"
 								}`}
 							>
-								<IonIcon icon={micOutline} className="text-sm" />
-								{listening ? "Listening…" : "Tap to speak"}
+								<IonIcon icon={ICONS.micSolid} className="text-[11px]" />
+								{listening ? "Listening…" : "Tap to Speak"}
 							</button>
 						</div>
 						{descriptionError ? (
-							<p className="mt-1.5 text-sm text-danger">{descriptionError}</p>
+							<p className="mt-1.5 text-[11px] text-danger">
+								{descriptionError}
+							</p>
 						) : null}
 
-						<span className="mb-1.5 mt-4 block text-sm font-semibold text-ink">
+						<span className="mb-1.5 mt-4 block text-[12px] font-bold text-ink">
 							Address
 						</span>
 						<AddressAutocomplete
@@ -922,10 +930,10 @@ export default function Requirement() {
 							}}
 						/>
 						{addressError ? (
-							<p className="mt-1.5 text-sm text-danger">{addressError}</p>
+							<p className="mt-1.5 text-[11px] text-danger">{addressError}</p>
 						) : null}
 
-						<span className="mb-1.5 mt-4 block text-sm font-semibold text-ink">
+						<span className="mb-1.5 mt-4 block text-[12px] font-bold text-ink">
 							Estimated price
 						</span>
 						<div className="flex gap-2">
@@ -938,19 +946,19 @@ export default function Requirement() {
 								onChange={(event) =>
 									setPrice(event.target.value.replace(/[^\d]/g, ""))
 								}
-								className="min-w-0 flex-1 rounded-xl border border-line bg-white px-3.5 py-3 font-sans text-base text-ink outline-none placeholder:text-muted-light focus:border-primary disabled:opacity-50"
+								className="min-w-0 flex-1 rounded-[9px] border border-[#dae3ef] bg-white px-3.5 py-3 font-sans text-[12px] text-ink outline-none placeholder:font-medium placeholder:text-[#b2b8c2] focus:border-primary disabled:opacity-50"
 							/>
 							<button
 								type="button"
 								aria-pressed={priceUnsure}
 								onClick={() => setPriceUnsure((value) => !value)}
-								className={`shrink-0 rounded-xl border px-5 text-[14px] font-semibold ${
+								className={`shrink-0 rounded-[9px] border px-5 text-[14px] font-semibold ${
 									priceUnsure
-										? "border-primary bg-primary text-white"
-										: "border-line bg-white text-muted"
+										? "border-primary bg-[#f5f7fb] text-primary"
+										: "border-[#dae3ef] bg-white text-muted"
 								}`}
 							>
-								Not sure
+								Not Sure
 							</button>
 						</div>
 					</section>
@@ -959,14 +967,14 @@ export default function Requirement() {
 						type="button"
 						onClick={submit}
 						disabled={submitting}
-						className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-[15px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
+						className="mt-4 flex w-full items-center justify-center gap-2 rounded-[8px] bg-primary py-3.5 text-[15px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
 					>
 						{submitting ? (
 							<IonSpinner name="crescent" className="h-5 w-5" />
 						) : (
 							<>
 								Post Requirement
-								<IonIcon icon={arrowForward} className="text-lg" />
+								<IonIcon icon={ICONS.arrowForward} className="text-lg" />
 							</>
 						)}
 					</button>
