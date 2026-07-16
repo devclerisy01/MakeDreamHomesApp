@@ -13,6 +13,7 @@ import {
 	locationFromCity,
 	type SelectedLocation,
 } from "@/lib/geo/location-store";
+import { getCurrentCoords } from "@/lib/native/geolocation";
 import { toastInfo } from "@/lib/api/toast";
 import { ICONS } from "@/theme/icons";
 
@@ -27,11 +28,6 @@ interface CityPickerModalProps {
 }
 
 const VISIBLE_LIMIT = 8;
-const GEO_OPTIONS: PositionOptions = {
-	enableHighAccuracy: false,
-	maximumAge: 600_000,
-	timeout: 8_000,
-};
 
 function newSessionToken(): string {
 	const c = globalThis.crypto;
@@ -168,34 +164,23 @@ export function CityPickerModal({
 		onClose();
 	}
 
-	function useCurrentLocation() {
+	async function useCurrentLocation() {
 		if (locating) return;
-		if (typeof navigator === "undefined" || !navigator.geolocation) {
-			toastInfo(UI_MESSAGES.locationUnavailable);
+		setLocating(true);
+		// Requests the OS location permission on native, then reads the position.
+		const result = await getCurrentCoords();
+		setLocating(false);
+		if (!result.ok) {
+			toastInfo(
+				result.reason === "denied"
+					? UI_MESSAGES.locationDenied
+					: UI_MESSAGES.locationUnavailable,
+			);
 			return;
 		}
-		setLocating(true);
-		navigator.geolocation.getCurrentPosition(
-			(pos) => {
-				setLocating(false);
-				const near = nearestCity(
-					cities,
-					pos.coords.latitude,
-					pos.coords.longitude,
-				);
-				if (near) pickCity(near);
-				else toastInfo(UI_MESSAGES.locationFailed);
-			},
-			(err) => {
-				setLocating(false);
-				toastInfo(
-					err.code === err.PERMISSION_DENIED
-						? UI_MESSAGES.locationDenied
-						: UI_MESSAGES.locationFailed,
-				);
-			},
-			GEO_OPTIONS,
-		);
+		const near = nearestCity(cities, result.latitude, result.longitude);
+		if (near) pickCity(near);
+		else toastInfo(UI_MESSAGES.locationFailed);
 	}
 
 	const searching = query.trim().length >= 2;

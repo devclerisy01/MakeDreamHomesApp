@@ -10,6 +10,7 @@ import {
 	placeReverseGeocode,
 	type PlacePrediction,
 } from "@/lib/api/places";
+import { getCurrentCoords } from "@/lib/native/geolocation";
 import { toastInfo } from "@/lib/api/toast";
 
 interface AddressAutocompleteProps {
@@ -22,12 +23,6 @@ interface AddressAutocompleteProps {
 	/** Show a button that fills the field from the device's current location. */
 	enableCurrentLocation?: boolean;
 }
-
-const GEO_OPTIONS: PositionOptions = {
-	enableHighAccuracy: false,
-	maximumAge: 600_000,
-	timeout: 8_000,
-};
 
 const FIELD =
 	"w-full rounded-xl border bg-white px-3.5 py-3 font-sans text-base text-ink outline-none transition-colors placeholder:text-muted-light focus:border-primary";
@@ -128,41 +123,35 @@ export function AddressAutocomplete({
 		if (result) onSelect(result);
 	}
 
-	function handleUseCurrentLocation() {
+	async function handleUseCurrentLocation() {
 		if (locating) return;
-		if (!navigator.geolocation) {
-			toastInfo(UI_MESSAGES.locationUnavailable);
-			return;
-		}
 		setOpen(false);
 		setLocating(true);
-		navigator.geolocation.getCurrentPosition(
-			async (pos) => {
-				try {
-					const result = await placeReverseGeocode(
-						String(pos.coords.latitude),
-						String(pos.coords.longitude),
-					);
-					if (result) {
-						onChange(result.full);
-						onSelect(result);
-					} else {
-						toastInfo(UI_MESSAGES.locationFailed);
-					}
-				} finally {
-					setLocating(false);
-				}
-			},
-			(err) => {
-				setLocating(false);
-				toastInfo(
-					err.code === err.PERMISSION_DENIED
-						? UI_MESSAGES.locationDenied
-						: UI_MESSAGES.locationFailed,
-				);
-			},
-			GEO_OPTIONS,
-		);
+		// Requests the OS location permission on native, then reads the position.
+		const coords = await getCurrentCoords();
+		if (!coords.ok) {
+			setLocating(false);
+			toastInfo(
+				coords.reason === "denied"
+					? UI_MESSAGES.locationDenied
+					: UI_MESSAGES.locationUnavailable,
+			);
+			return;
+		}
+		try {
+			const result = await placeReverseGeocode(
+				String(coords.latitude),
+				String(coords.longitude),
+			);
+			if (result) {
+				onChange(result.full);
+				onSelect(result);
+			} else {
+				toastInfo(UI_MESSAGES.locationFailed);
+			}
+		} finally {
+			setLocating(false);
+		}
 	}
 
 	const border = error ? "border-danger" : "border-line";
