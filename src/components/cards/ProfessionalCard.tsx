@@ -1,8 +1,13 @@
-import { IonIcon, IonRouterLink } from "@ionic/react";
+import { IonIcon, IonRouterLink, useIonRouter } from "@ionic/react";
+import type { MouseEvent } from "react";
 
 import { Avatar } from "@/components/common/Avatar";
 import { SaveButton } from "@/components/common/SaveButton";
-import { professionalHref } from "@/constants/routes";
+import {
+	encodeProfessionalId,
+	professionalHref,
+	ROUTES,
+} from "@/constants/routes";
 import { getImageSrc } from "@/lib/format";
 import { CARD, TAG_MUTED } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
@@ -18,8 +23,16 @@ export function ProfessionalCard({
 	/** Hide the save heart (e.g. the Home feed, which matches the clean design). */
 	showSave?: boolean;
 }) {
+	const router = useIonRouter();
 	const thumbs = pro.showcase?.items?.slice(0, 2) ?? [];
 	const leads = pro.leadCount ?? 0;
+
+	// Deep-link to this pro's leads without triggering the card's detail link.
+	function openLeads(event: MouseEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		router.push(`${ROUTES.leads}?userId=${encodeProfessionalId(pro.id)}`);
+	}
 
 	return (
 		<IonRouterLink
@@ -72,10 +85,14 @@ export function ProfessionalCard({
 
 					{/* Figma: SemiBold 10px, #26428B */}
 					{leads > 0 ? (
-						<span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+						<button
+							type="button"
+							onClick={openLeads}
+							className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-primary"
+						>
 							<IonIcon icon={ICONS.activeLeads} className="text-[12px]" />
 							{leads} Active Lead{leads > 1 ? "s" : ""}
-						</span>
+						</button>
 					) : null}
 
 					<div className="flex items-start justify-between gap-2.5">

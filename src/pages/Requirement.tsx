@@ -404,7 +404,9 @@ export default function Requirement() {
 			});
 			// Success is toasted centrally (leads.requirementSubmitted).
 			resetForm();
-			router.push(ROUTES.leads, "root");
+			// Show the user their own leads after posting (mirrors the web, which
+			// lands on the "My Leads" view); mobile surfaces them on the profile.
+			router.push(ROUTES.profile, "root");
 		} catch {
 			// createRequirement failures are toasted centrally; nothing to add.
 		} finally {

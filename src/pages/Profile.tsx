@@ -23,6 +23,10 @@ import { useCallback, useEffect, useState } from "react";
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
 import { Avatar } from "@/components/common/Avatar";
 import { ReadMoreText } from "@/components/common/ReadMoreText";
+import {
+	PortfolioGridSkeleton,
+	SkeletonList,
+} from "@/components/common/Skeletons";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
 import { AddPortfolioModal } from "@/components/profile/AddPortfolioModal";
@@ -424,7 +428,12 @@ export default function Profile() {
 										<IonIcon icon={addOutline} className="text-lg" />
 									</button>
 								</div>
-								{portfolio.length ? (
+								{myPortfolio === null ? (
+									<PortfolioGridSkeleton
+										count={4}
+										className="grid grid-cols-2 gap-3.5"
+									/>
+								) : portfolio.length ? (
 									<div className="grid grid-cols-2 gap-3.5">
 										{portfolio.map((item) => (
 											<PortfolioTile
@@ -469,7 +478,9 @@ export default function Profile() {
 										<IonIcon icon={addOutline} className="text-lg" />
 									</button>
 								</div>
-								{leads.length ? (
+								{myLeads === null ? (
+									<SkeletonList count={3} variant="lead" />
+								) : leads.length ? (
 									<div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
 										{leads.map((lead) => (
 											<MyLeadCard

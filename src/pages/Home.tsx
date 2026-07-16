@@ -22,6 +22,7 @@ import { HOME_LEAD_TABS, HOME_PRO_TABS } from "@/constants/categories";
 import { ROUTES } from "@/constants/routes";
 import { getLeads } from "@/lib/api/leads";
 import { fetchProfessionals } from "@/lib/api/professionals";
+import { locationToGeo, useSelectedLocation } from "@/lib/geo/location-store";
 import { CARD, LIST_GRID, SECTION_HEAD, SECTION_TITLE } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
 import type {
@@ -40,11 +41,15 @@ export default function Home() {
 	const [proTab, setProTab] = useState<DirectoryCategoryId>("professionals");
 	const [pros, setPros] = useState<ProfessionalListing[] | null>(null);
 	const [reloadKey, setReloadKey] = useState(0);
+	const location = useSelectedLocation();
 
 	useEffect(() => {
 		const controller = new AbortController();
 		setLeads(null);
-		getLeads({ category: leadTab, limit: LEAD_LIMIT }, controller.signal)
+		getLeads(
+			{ category: leadTab, limit: LEAD_LIMIT, ...locationToGeo(location) },
+			controller.signal,
+		)
 			.then((res) => {
 				if (!controller.signal.aborted) setLeads(res.items);
 			})
@@ -52,13 +57,13 @@ export default function Home() {
 				if (!controller.signal.aborted) setLeads([]);
 			});
 		return () => controller.abort();
-	}, [leadTab, reloadKey]);
+	}, [leadTab, reloadKey, location]);
 
 	useEffect(() => {
 		const controller = new AbortController();
 		setPros(null);
 		fetchProfessionals(
-			{ category: proTab, limit: PRO_LIMIT },
+			{ category: proTab, limit: PRO_LIMIT, ...locationToGeo(location) },
 			controller.signal,
 		)
 			.then((res) => {
@@ -68,11 +73,11 @@ export default function Home() {
 				if (!controller.signal.aborted) setPros([]);
 			});
 		return () => controller.abort();
-	}, [proTab, reloadKey]);
+	}, [proTab, reloadKey, location]);
 
 	return (
 		<IonPage>
-			<AppHeader showLogo tinted />
+			<AppHeader showLogo tinted showLocation />
 			<IonContent style={{ "--background": "#f6f7fb" } as React.CSSProperties}>
 				<IonRefresher
 					slot="fixed"
@@ -125,7 +130,9 @@ export default function Home() {
 							<section className="mt-[22px]">
 								<div className={SECTION_HEAD}>
 									<h2 className={SECTION_TITLE}>Latest Leads</h2>
-									<ViewAllLink routerLink={ROUTES.leads} />
+									<ViewAllLink
+										routerLink={`${ROUTES.leads}?category=${leadTab}`}
+									/>
 								</div>
 								<CategoryTabs
 									tabs={HOME_LEAD_TABS}
@@ -143,12 +150,7 @@ export default function Home() {
 									) : (
 										<div className={LIST_GRID}>
 											{leads.map((lead) => (
-												<LeadCard
-													key={lead.id}
-													lead={lead}
-													showSave={false}
-													showReadMore={false}
-												/>
+												<LeadCard key={lead.id} lead={lead} showSave={false} />
 											))}
 										</div>
 									)}
@@ -158,7 +160,9 @@ export default function Home() {
 							<section className="mt-[22px]">
 								<div className={SECTION_HEAD}>
 									<h2 className={SECTION_TITLE}>Find Professionals</h2>
-									<ViewAllLink routerLink={ROUTES.professionals} />
+									<ViewAllLink
+										routerLink={`${ROUTES.professionals}?type=${proTab}`}
+									/>
 								</div>
 								<CategoryTabs
 									tabs={HOME_PRO_TABS}

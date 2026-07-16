@@ -1,6 +1,12 @@
 import { LISTING_PAGE_SIZE } from "@/config/api";
 import { apiGet, apiGetEnvelope } from "@/lib/api/client";
 import { decodeProfessionalId } from "@/constants/routes";
+import {
+	applyGeoScopeParams,
+	applyGeoSearchParams,
+	type GeoQuery,
+	type SortSpec,
+} from "@/lib/geo/geo";
 import type {
 	DirectoryCategoryId,
 	PortfolioItem,
@@ -97,24 +103,18 @@ const USER_TYPE_BY_CATEGORY: Record<DirectoryCategoryId, string> = {
 	"property-dealers": "dealer",
 };
 
-const DIRECTORY_SORT_MAP: Record<
-	string,
-	{ sortBy: string; sortOrder: "ASC" | "DESC" }
-> = {
+const DIRECTORY_SORT_MAP: Record<string, SortSpec> = {
 	latest: { sortBy: "createdAt", sortOrder: "DESC" },
 	topRated: { sortBy: "overallRating", sortOrder: "DESC" },
 	experienced: { sortBy: "experience", sortOrder: "DESC" },
 };
 
-export interface DirectoryQuery {
+export interface DirectoryQuery extends GeoQuery {
+	// GeoQuery contributes: sort, lat, lng, radius, nearCity.
 	category?: DirectoryCategoryId;
 	page?: number;
 	limit?: number;
 	search?: string;
-	sort?: string;
-	lat?: number;
-	lng?: number;
-	radius?: number;
 	/** Single professional-category id (professionals track). */
 	professionalUserType?: string;
 	/** Single supplier product-category id (suppliers track). */
@@ -159,23 +159,8 @@ function buildDirectoryParams(query: DirectoryQuery): URLSearchParams {
 	const search = query.search?.trim().slice(0, 100);
 	if (search) params.set("search", search);
 
-	if (query.sort === "nearest" && query.lat != null && query.lng != null) {
-		params.set("sortBy", "distance");
-		params.set("lat", String(query.lat));
-		params.set("lng", String(query.lng));
-	} else {
-		const mapped =
-			(query.sort ? DIRECTORY_SORT_MAP[query.sort] : undefined) ??
-			DIRECTORY_SORT_MAP.latest;
-		params.set("sortBy", mapped.sortBy);
-		params.set("sortOrder", mapped.sortOrder);
-	}
-
-	if (query.radius != null && query.lat != null && query.lng != null) {
-		params.set("lat", String(query.lat));
-		params.set("lng", String(query.lng));
-		params.set("radius", String(query.radius));
-	}
+	// Sort + geo (distance ordering when a city is scoped) — shared with leads.
+	applyGeoSearchParams(params, query, DIRECTORY_SORT_MAP);
 
 	if (query.professionalUserType) {
 		params.set("professionalUserType", query.professionalUserType);
@@ -236,6 +221,8 @@ export async function fetchDirectoryFilters(
 	// sent — a facet must not filter its own options.
 	if (query.hasReviews) params.set("hasReviews", "true");
 	if (query.hasPortfolio) params.set("hasPortfolio", "true");
+	// Scope facet counts by the selected city's radius (matches the listing).
+	applyGeoScopeParams(params, query);
 
 	const data = await apiGet<{ locations: LocationFacet[] }>(
 		`/app/users/filters?${params.toString()}`,
@@ -262,5 +249,23 @@ export async function getProfessionalDetail(
 		return await apiGet<ProfessionalDetail>(`/app/users/${id}`, { signal });
 	} catch {
 		return null;
+	}
+}
+
+/** Similar professionals for the detail-page rail. Fails soft to an empty list. */
+export async function fetchSimilarProfessionals(
+	slug: string,
+	signal?: AbortSignal,
+): Promise<ProfessionalListing[]> {
+	try {
+		const id = decodeProfessionalId(slug);
+		const data = await apiGet<ApiUser[]>(`/app/users/${id}/similar`, {
+			signal,
+		});
+		return (data ?? []).map((user) =>
+			toProfessionalListing(user, user.category ?? "professionals"),
+		);
+	} catch {
+		return [];
 	}
 }

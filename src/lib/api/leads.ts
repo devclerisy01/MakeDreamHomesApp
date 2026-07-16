@@ -2,7 +2,18 @@ import { LISTING_PAGE_SIZE } from "@/config/api";
 import { apiGet, apiGetEnvelope, apiPost } from "@/lib/api/client";
 import type { LocationFacet } from "@/lib/api/professionals";
 import { uploadImageViaPresign } from "@/lib/api/uploads";
+import {
+	applyGeoScopeParams,
+	applyGeoSearchParams,
+	type GeoQuery,
+	type SortSpec,
+} from "@/lib/geo/geo";
 import type { Lead, LeadCategoryId } from "@/types";
+
+/** Leads sort options → API sortBy/sortOrder (distance handled by the geo helper). */
+const LEAD_SORT_MAP: Record<string, SortSpec> = {
+	latest: { sortBy: "createdAt", sortOrder: "DESC" },
+};
 
 /**
  * Uploads a requirement attachment directly to storage via a presigned URL and
@@ -103,19 +114,18 @@ export async function createRequirement(
 	await apiPost("/app/leads", body, { auth: true });
 }
 
-export interface LeadsQuery {
+export interface LeadsQuery extends GeoQuery {
+	// GeoQuery contributes: sort, lat, lng, radius, nearCity.
 	category?: string;
 	page?: number;
 	limit?: number;
 	search?: string;
-	sort?: string;
-	lat?: number;
-	lng?: number;
-	radius?: number;
 	/** Decoded professional id to scope leads to (from `?userId=`). */
 	userId?: string;
-	/** buy/sell (property & material) — narrows the category variant. */
+	/** buy/sell OR hire/available — narrows the category variant. */
 	intent?: string[];
+	/** Profession/product sub-category (single, substring-matched by the API). */
+	subcategory?: string;
 	/** Property-group tokens (residential / commercial / agriculture). */
 	propertyGroup?: string[];
 	/** Property concrete-type tokens (flat / plot / kothi / …). */
@@ -139,21 +149,11 @@ function buildLeadsParams(query: LeadsQuery): URLSearchParams {
 	if (query.category) params.set("category", query.category);
 	const search = query.search?.trim();
 	if (search) params.set("search", search);
+	if (query.subcategory?.trim())
+		params.set("subcategory", query.subcategory.trim());
 
-	if (query.sort === "nearest" && query.lat != null && query.lng != null) {
-		params.set("sortBy", "distance");
-		params.set("lat", String(query.lat));
-		params.set("lng", String(query.lng));
-	} else {
-		params.set("sortBy", "createdAt");
-		params.set("sortOrder", "DESC");
-	}
-
-	if (query.radius != null && query.lat != null && query.lng != null) {
-		params.set("lat", String(query.lat));
-		params.set("lng", String(query.lng));
-		params.set("radius", String(query.radius));
-	}
+	// Sort + geo (distance ordering when a city is scoped) — shared with directory.
+	applyGeoSearchParams(params, query, LEAD_SORT_MAP);
 
 	if (query.userId?.trim()) params.set("userId", query.userId.trim());
 	for (const v of query.intent ?? []) params.append("intent", v);
@@ -176,9 +176,13 @@ export async function fetchLeadFilters(
 	if (query.category) params.set("category", query.category);
 	const search = query.search?.trim();
 	if (search) params.set("search", search);
+	if (query.subcategory?.trim())
+		params.set("subcategory", query.subcategory.trim());
 	for (const v of query.intent ?? []) params.append("intent", v);
 	for (const v of query.propertyGroup ?? []) params.append("propertyGroup", v);
 	for (const v of query.propertyType ?? []) params.append("propertyType", v);
+	// Scope facet counts by the selected city's radius (matches the listing).
+	applyGeoScopeParams(params, query);
 	return (
 		(await apiGet<LocationFacet[]>(`/app/leads/filters?${params.toString()}`, {
 			signal,

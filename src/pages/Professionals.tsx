@@ -45,20 +45,16 @@ import {
 	fetchProfessionals,
 	type LocationFacet,
 } from "@/lib/api/professionals";
+import { locationToGeo, useSelectedLocation } from "@/lib/geo/location-store";
 import { LIST_GRID } from "@/lib/ui";
 import type { DirectoryCategoryId } from "@/types";
 
-const SORT_GROUP: FilterGroup = {
-	key: "sort",
-	label: "Sort by",
-	header: "Sort by",
-	multi: false,
-	options: [
-		{ value: "latest", label: "Latest" },
-		{ value: "topRated", label: "Top Rated" },
-		{ value: "experienced", label: "Most Experienced" },
-	],
-};
+// Matches the web sort dropdown: Latest + Top Rated, plus Nearest only when a
+// location is active. (Web does not expose "Most Experienced".)
+const SORT_OPTIONS_BASE = [
+	{ value: "latest", label: "Latest" },
+	{ value: "topRated", label: "Top Rated" },
+];
 
 const RATINGS_GROUP: FilterGroup = {
 	key: "flags",
@@ -88,17 +84,29 @@ export default function Professionals() {
 		() => new URLSearchParams(qs).get("search")?.trim() ?? "",
 		[qs],
 	);
+	// Deep-link track: `?type=professionals|property-dealers|material-suppliers`.
+	const urlType = useMemo(() => {
+		const t = new URLSearchParams(qs).get("type");
+		return DIRECTORY_TABS.some((tab) => tab.id === t)
+			? (t as DirectoryCategoryId)
+			: null;
+	}, [qs]);
 
 	const [category, setCategory] = useState<DirectoryCategoryId>(
-		DEFAULT_DIRECTORY_CATEGORY,
+		urlType ?? DEFAULT_DIRECTORY_CATEGORY,
 	);
 	const [search, setSearch] = useState(urlSearch);
 	const [selection, setSelection] = useState<FilterSelection>({});
+	const location = useSelectedLocation();
 
 	// Adopt a search term arriving from the URL (e.g. Home "View all").
 	useEffect(() => {
 		setSearch(urlSearch);
 	}, [urlSearch]);
+	// Adopt a track arriving from the URL (e.g. Home "View all" / deep link).
+	useEffect(() => {
+		if (urlType) setCategory(urlType);
+	}, [urlType]);
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [categories, setCategories] = useState<CategoryOption[]>([]);
 	const [locations, setLocations] = useState<LocationFacet[]>([]);
@@ -142,16 +150,26 @@ export default function Professionals() {
 				productType: category === "material-suppliers" ? typeId : undefined,
 				hasReviews: flags.includes("hasReviews"),
 				hasPortfolio: flags.includes("hasPortfolio"),
+				...locationToGeo(location),
 			},
 			controller.signal,
 		)
 			.then(setLocations)
 			.catch(() => {});
 		return () => controller.abort();
-	}, [filtersOpen, category, search, typeId, flags]);
+	}, [filtersOpen, category, search, typeId, flags, location]);
 
 	const groups = useMemo<FilterGroup[]>(() => {
-		const list: FilterGroup[] = [SORT_GROUP];
+		const sortGroup: FilterGroup = {
+			key: "sort",
+			label: "Sort by",
+			header: "Sort by",
+			multi: false,
+			options: location
+				? [{ value: "nearest", label: "Nearest" }, ...SORT_OPTIONS_BASE]
+				: SORT_OPTIONS_BASE,
+		};
+		const list: FilterGroup[] = [sortGroup];
 		const typeLabel = TYPE_LABEL[category];
 		if (typeLabel && categories.length) {
 			list.push({
@@ -180,7 +198,7 @@ export default function Professionals() {
 			});
 		}
 		return list;
-	}, [category, categories, locations]);
+	}, [category, categories, locations, location]);
 
 	const fetcher = useCallback(
 		(page: number, signal: AbortSignal) =>
@@ -198,19 +216,20 @@ export default function Professionals() {
 					places,
 					hasReviews: flags.includes("hasReviews"),
 					hasPortfolio: flags.includes("hasPortfolio"),
+					...locationToGeo(location),
 				},
 				signal,
 			),
-		[category, search, sort, typeId, places, flags],
+		[category, search, sort, typeId, places, flags, location],
 	);
 	const { items, status, hasMore, loadMore, reload } = usePagedList(
 		fetcher,
-		`${category}|${search}|${JSON.stringify(selection)}`,
+		`${category}|${search}|${location?.city ?? ""}|${JSON.stringify(selection)}`,
 	);
 
 	return (
 		<IonPage>
-			<AppHeader title="Professionals" />
+			<AppHeader title="Professionals" showLocation />
 			<IonContent>
 				<IonRefresher
 					slot="fixed"

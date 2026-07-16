@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { PortfolioCard } from "@/components/cards/PortfolioCard";
+import { ProfessionalCard } from "@/components/cards/ProfessionalCard";
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
 import { Avatar } from "@/components/common/Avatar";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -18,7 +19,10 @@ import { SaveButton } from "@/components/common/SaveButton";
 import { WriteReviewModal } from "@/components/profile/WriteReviewModal";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
-import { getProfessionalDetail } from "@/lib/api/professionals";
+import {
+	fetchSimilarProfessionals,
+	getProfessionalDetail,
+} from "@/lib/api/professionals";
 import { hasReviewed } from "@/lib/api/reviews";
 import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
@@ -32,6 +36,7 @@ import {
 import type {
 	DirectoryCategoryId,
 	ProfessionalDetail as ProDetail,
+	ProfessionalListing,
 } from "@/types";
 
 type Status = "loading" | "ready" | "notfound";
@@ -51,12 +56,14 @@ export default function ProfessionalDetail() {
 	const [status, setStatus] = useState<Status>("loading");
 	const [reviewOpen, setReviewOpen] = useState(false);
 	const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+	const [similar, setSimilar] = useState<ProfessionalListing[]>([]);
 
 	useEffect(() => {
 		const controller = new AbortController();
 		setStatus("loading");
 		setPro(null);
 		setAlreadyReviewed(false);
+		setSimilar([]);
 		getProfessionalDetail(slug, controller.signal)
 			.then((data) => {
 				if (controller.signal.aborted) return;
@@ -70,6 +77,12 @@ export default function ProfessionalDetail() {
 			.catch(() => {
 				if (!controller.signal.aborted) setStatus("notfound");
 			});
+		// Similar professionals rail (fails soft to empty).
+		fetchSimilarProfessionals(slug, controller.signal)
+			.then((list) => {
+				if (!controller.signal.aborted) setSimilar(list);
+			})
+			.catch(() => {});
 		return () => controller.abort();
 	}, [slug]);
 
@@ -93,7 +106,8 @@ export default function ProfessionalDetail() {
 
 	function onWriteReview() {
 		if (!isAuthed) {
-			openLogin();
+			// Resume the review flow once the user signs in (mirrors the web).
+			openLogin({ onAuthenticated: () => setReviewOpen(true) });
 			return;
 		}
 		setReviewOpen(true);
@@ -101,7 +115,7 @@ export default function ProfessionalDetail() {
 
 	return (
 		<IonPage>
-			<AppHeader title={pro?.name ?? "Professional"} />
+			<AppHeader title={pro?.name ?? "Professional"} back />
 			<IonContent>
 				<Container>
 					{status === "loading" ? (
@@ -224,6 +238,21 @@ export default function ProfessionalDetail() {
 									</p>
 								)}
 							</section>
+
+							{similar.length ? (
+								<section className="mt-[22px]">
+									<div className={SECTION_HEAD}>
+										<h2 className={SECTION_TITLE}>Similar professionals</h2>
+									</div>
+									<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+										{similar.map((s) => (
+											<div key={s.id} className="w-[240px] shrink-0">
+												<ProfessionalCard pro={s} />
+											</div>
+										))}
+									</div>
+								</section>
+							) : null}
 						</>
 					)}
 				</Container>

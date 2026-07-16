@@ -199,7 +199,9 @@ export function GlobalSearch() {
 											key={l.id}
 											type="button"
 											onClick={() =>
-												go(`${ROUTES.leads}?search=${encodeURIComponent(q)}`)
+												go(
+													`${ROUTES.leads}?category=${l.category}&search=${encodeURIComponent(l.title)}`,
+												)
 											}
 											className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-muted"
 										>

@@ -1,8 +1,10 @@
 import { IonApp, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
+import { useEffect } from "react";
 
 import { TabsShell } from "@/components/layout/TabsShell";
 import { LoginGateProvider } from "@/lib/auth/login-gate";
+import { ensureLocationInitialized } from "@/lib/geo/location-store";
 
 /* Self-hosted Plus Jakarta Sans (weights the app uses: 400/500/600/700/800).
    Bundled by Vite so it works offline in the Capacitor WebView — no CDN. */
@@ -24,14 +26,22 @@ import "@/theme/app.css";
 
 setupIonicReact({ mode: "md" });
 
-const App: React.FC = () => (
-	<IonApp>
-		<IonReactRouter>
-			<LoginGateProvider>
-				<TabsShell />
-			</LoginGateProvider>
-		</IonReactRouter>
-	</IonApp>
-);
+const App: React.FC = () => {
+	// Bootstrap the selected city once (device location → nearest verified city,
+	// else the default). Idempotent — no-op when a city is already stored.
+	useEffect(() => {
+		void ensureLocationInitialized();
+	}, []);
+
+	return (
+		<IonApp>
+			<IonReactRouter>
+				<LoginGateProvider>
+					<TabsShell />
+				</LoginGateProvider>
+			</IonReactRouter>
+		</IonApp>
+	);
+};
 
 export default App;
