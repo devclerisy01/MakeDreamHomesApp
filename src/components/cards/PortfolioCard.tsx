@@ -21,7 +21,7 @@ export function PortfolioCard({ item }: { item: PortfolioItem }) {
 			</div>
 			<div className="px-3 py-2.5">
 				{item.title ? (
-					<h4 className="m-0 line-clamp-2 text-[13.5px] font-bold leading-snug text-ink">
+					<h4 className="m-0 line-clamp-2 text-[13px] font-bold leading-snug text-ink">
 						{item.title}
 					</h4>
 				) : null}

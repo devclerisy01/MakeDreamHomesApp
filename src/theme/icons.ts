@@ -25,7 +25,6 @@
  * Ionicons do — then `className="text-primary"` etc. keeps working.
  */
 import {
-	addCircleOutline,
 	addOutline,
 	alertCircleOutline,
 	arrowForward,
@@ -41,29 +40,28 @@ import {
 	globeOutline,
 	heart,
 	heartOutline,
-	homeOutline,
 	imageOutline,
 	informationCircleOutline,
 	locateOutline,
-	logInOutline,
 	logOutOutline,
 	micOutline,
 	optionsOutline,
 	peopleOutline,
-	personCircleOutline,
 	personOutline,
 	search,
 	shareSocialOutline,
 	starHalf,
 	starOutline,
 	timeOutline,
-	walletOutline,
 } from "ionicons/icons";
 
 /* Custom Figma SVGs (Vite resolves each import to a URL string usable by
    IonIcon's `icon=` prop). Stroke/fill uses `currentColor` so tab tinting and
    text-color utilities keep working — except sparkles (white, on a black
    button) and star (fixed gold), which are intentionally fixed-color. */
+import iconActiveLeads from "@/assets/icons/active-leads.svg";
+import iconBudget from "@/assets/icons/budget.svg";
+import iconCategoryProperty from "@/assets/icons/category-property.svg";
 import iconInfo from "@/assets/icons/info.svg";
 import iconLocation from "@/assets/icons/location.svg";
 import iconMenu from "@/assets/icons/menu.svg";
@@ -77,6 +75,8 @@ import iconStarFill from "@/assets/icons/star-fill.svg";
 import iconTabHome from "@/assets/icons/tab-home.svg";
 import iconTabLeads from "@/assets/icons/tab-leads.svg";
 import iconTabProfessionals from "@/assets/icons/tab-professionals.svg";
+import iconTabProfile from "@/assets/icons/tab-profile.svg";
+import iconTabRequirement from "@/assets/icons/tab-requirement.svg";
 
 /**
  * Wrap a raw inline SVG string as a data-URI usable by `IonIcon`'s `icon=` prop.
@@ -111,10 +111,10 @@ export const ICONS = {
 	// ── Bottom tab bar ──────────────────────────────────────────────────
 	tabHome: iconTabHome, // custom
 	tabLeads: iconTabLeads, // custom
-	tabRequirement: addCircleOutline,
-	tabProfessionals: iconTabProfessionals, // custom
-	tabProfile: personCircleOutline,
-	tabLogin: logInOutline,
+	tabRequirement: iconTabRequirement, // custom (plus in circle)
+	tabProfessionals: iconTabProfessionals, // custom (hard-hat)
+	tabProfile: iconTabProfile, // custom (person + sparkle)
+	tabLogin: iconTabProfile, // custom (person + sparkle, same as profile)
 
 	// ── Header ──────────────────────────────────────────────────────────
 	menu: iconMenu, // custom (breadcrumb menu)
@@ -123,15 +123,15 @@ export const ICONS = {
 	notifications: iconNotifications, // custom (bell + badge)
 
 	// ── Lead categories (LeadCard tile) ─────────────────────────────────
-	categoryProperty: homeOutline,
+	categoryProperty: iconCategoryProperty, // custom (house)
 	categoryMaterial: cubeOutline,
-	categoryProfessional: iconTabProfessionals, // custom (two people)
+	categoryProfessional: iconActiveLeads, // custom (two people)
 
 	// ── Card / listing meta ─────────────────────────────────────────────
 	location: iconLocation, // custom
 	locate: locateOutline,
-	budget: walletOutline,
-	activeLeads: iconTabProfessionals, // custom (two people)
+	budget: iconBudget, // custom (wallet)
+	activeLeads: iconActiveLeads, // custom (two people)
 	time: timeOutline,
 	lead: iconTabLeads, // custom (same document glyph as the Leads tab)
 	professional: personOutline,

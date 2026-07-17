@@ -1,4 +1,9 @@
 import { toastController } from "@ionic/core";
+import {
+	alertCircle as alertCircleIcon,
+	checkmarkCircle as checkmarkCircleIcon,
+	informationCircle as informationCircleIcon,
+} from "ionicons/icons";
 
 /**
  * The single place that shows a toast in the app. Imperative (works OUTSIDE
@@ -49,12 +54,18 @@ export async function presentToast(
 			message: trimmed,
 			duration: kind === "success" ? 1800 : kind === "error" ? 2600 : 2000,
 			position: "top",
+			cssClass: `mdh-toast mdh-toast--${kind}`,
+			icon:
+				kind === "success"
+					? checkmarkCircleIcon
+					: kind === "error"
+						? alertCircleIcon
+						: informationCircleIcon,
 			...(kind === "success"
 				? { color: "success" }
 				: kind === "error"
 					? { color: "danger" }
 					: { color: "dark" }),
-			buttons: [{ text: "OK", role: "cancel" }],
 		});
 		await toast.present();
 	} catch {

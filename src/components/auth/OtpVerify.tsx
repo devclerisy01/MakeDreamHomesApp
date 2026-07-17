@@ -82,7 +82,7 @@ export function OtpVerify({
 				<IonIcon icon={chevronBackOutline} className="text-2xl" />
 			</button>
 
-			<h1 className="text-[28px] font-bold leading-tight text-ink">
+			<h1 className="text-[20px] font-bold leading-tight text-ink">
 				Verify your number
 			</h1>
 			<p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-light">

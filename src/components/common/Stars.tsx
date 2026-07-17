@@ -13,8 +13,8 @@ interface StarsProps {
 export function Stars({ value, size = "sm" }: StarsProps) {
 	return (
 		<span
-			className={`inline-flex gap-px leading-none text-star ${
-				size === "lg" ? "text-[22px]" : "text-sm"
+			className={`inline-flex gap-1 leading-none text-[#F5A623] ${
+				size === "lg" ? "text-[20px]" : "text-sm"
 			}`}
 		>
 			{[0, 1, 2, 3, 4].map((i) => {

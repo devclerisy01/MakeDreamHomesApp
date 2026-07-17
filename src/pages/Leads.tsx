@@ -9,11 +9,7 @@ import {
 	IonRefresher,
 	IonRefresherContent,
 } from "@ionic/react";
-import {
-	alertCircleOutline,
-	documentTextOutline,
-	optionsOutline,
-} from "ionicons/icons";
+import { alertCircleOutline, documentTextOutline } from "ionicons/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -42,6 +38,7 @@ import type { LocationFacet } from "@/lib/api/professionals";
 import { locationToGeo, useSelectedLocation } from "@/lib/geo/location-store";
 import { usePagedList } from "@/hooks/usePagedList";
 import { LIST_GRID } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
 import type { LeadCategoryId } from "@/types";
 
 const INTENT_GROUP: FilterGroup = {
@@ -290,8 +287,8 @@ export default function Leads() {
 
 	return (
 		<IonPage>
-			<AppHeader title="Latest Leads" showLocation />
-			<IonContent>
+			<AppHeader title="Latest Leads" tinted showLocation />
+			<IonContent style={{ "--background": "#f6f7fb" } as React.CSSProperties}>
 				<IonRefresher
 					slot="fixed"
 					onIonRefresh={(event) => {
@@ -302,60 +299,70 @@ export default function Leads() {
 					<IonRefresherContent />
 				</IonRefresher>
 
-				<Container>
-					<SearchBar
-						key={urlSearch}
-						defaultValue={urlSearch}
-						onSearch={setSearch}
+				<div className="relative">
+					{/* Light-blue gradient backdrop behind the search + tabs. */}
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-x-0 top-0 h-[180px] bg-gradient-to-b from-[#e8f3fc] to-[#f6f7fb]"
 					/>
-					<div className="mt-3">
-						<CategoryTabs
-							tabs={LEAD_TABS}
-							active={category}
-							onChange={setCategory}
-						/>
-					</div>
-
-					<div className="mt-3.5">
-						{status === "loading" ? (
-							<SkeletonList count={5} variant="lead" />
-						) : status === "error" ? (
-							<EmptyState
-								icon={alertCircleOutline}
-								message="Couldn't load requirements. Pull down to retry."
+					<Container>
+						<div className="relative z-10">
+							<SearchBar
+								key={urlSearch}
+								defaultValue={urlSearch}
+								onSearch={setSearch}
 							/>
-						) : items.length === 0 ? (
-							<EmptyState
-								icon={documentTextOutline}
-								message="No requirements match your filters."
-							/>
-						) : (
-							<div className={LIST_GRID}>
-								{items.map((lead) => (
-									<LeadCard key={lead.id} lead={lead} />
-								))}
+							<div className="mt-3">
+								<CategoryTabs
+									tabs={LEAD_TABS}
+									active={category}
+									onChange={setCategory}
+								/>
 							</div>
-						)}
-					</div>
+						</div>
 
-					<IonInfiniteScroll
-						disabled={!hasMore || status !== "ready"}
-						onIonInfinite={(event) => {
-							void loadMore().then(() =>
-								(event.target as HTMLIonInfiniteScrollElement).complete(),
-							);
-						}}
-					>
-						<IonInfiniteScrollContent />
-					</IonInfiniteScroll>
-				</Container>
+						<div className="relative z-10 mt-3.5">
+							{status === "loading" ? (
+								<SkeletonList count={5} variant="lead" />
+							) : status === "error" ? (
+								<EmptyState
+									icon={alertCircleOutline}
+									message="Couldn't load requirements. Pull down to retry."
+								/>
+							) : items.length === 0 ? (
+								<EmptyState
+									icon={documentTextOutline}
+									message="No requirements match your filters."
+								/>
+							) : (
+								<div className={LIST_GRID}>
+									{items.map((lead) => (
+										<LeadCard key={lead.id} lead={lead} />
+									))}
+								</div>
+							)}
+						</div>
+
+						<IonInfiniteScroll
+							disabled={!hasMore || status !== "ready"}
+							onIonInfinite={(event) => {
+								void loadMore().then(() =>
+									(event.target as HTMLIonInfiniteScrollElement).complete(),
+								);
+							}}
+						>
+							<IonInfiniteScrollContent />
+						</IonInfiniteScroll>
+					</Container>
+				</div>
 
 				<IonFab slot="fixed" vertical="bottom" horizontal="end">
 					<IonFabButton
 						aria-label="Filters"
+						className="mdh-fab"
 						onClick={() => setFiltersOpen(true)}
 					>
-						<IonIcon icon={optionsOutline} />
+						<IonIcon icon={ICONS.filters} className="text-white" />
 					</IonFabButton>
 					{activeFilterCount > 0 ? (
 						<span className="pointer-events-none absolute right-0 top-0 z-10 grid h-6 min-w-6 -translate-y-1 translate-x-1 place-items-center rounded-full border-2 border-white bg-danger px-1 text-xs font-bold text-white">

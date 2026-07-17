@@ -26,9 +26,10 @@ export function LeadDetailsModal({
 }) {
 	const budget = formatBudget(lead.budget);
 	const posted = timeAgo(lead.createdAt);
-	const heading = lead.summary?.trim() || lead.description;
-	const showDescription =
-		lead.description?.trim() && lead.description.trim() !== heading;
+	// Always show the full requirement description in the body. Only skip it when
+	// it's identical to the heading (i.e. there was no separate summary).
+	const fullDescription = lead.description?.trim();
+
 	const images = (lead.images ?? [])
 		.map((src) => assetUrl(src))
 		.filter((src): src is string => Boolean(src));
@@ -36,19 +37,16 @@ export function LeadDetailsModal({
 	return (
 		<BoxModal isOpen={isOpen} onClose={onClose} title="Lead details">
 			<div className="flex flex-col gap-4">
-				<h3 className="m-0 text-[17px] font-bold leading-snug text-ink">
-					{heading}
+				<h3 className="m-0 text-base font-semibold leading-snug text-ink">
+					{fullDescription}
 				</h3>
 
-				{showDescription ? (
-					<p className="m-0 whitespace-pre-line text-[15px] leading-relaxed text-muted">
-						{lead.description}
-					</p>
-				) : null}
-
 				{budget ? (
-					<span className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink">
-						<IonIcon icon={walletOutline} className="text-muted-light" />
+					<span className="inline-flex items-center gap-2 text-[12px] font-semibold text-ink">
+						<IonIcon
+							icon={walletOutline}
+							className="text-muted-light text-base"
+						/>
 						Budget: {budget}
 					</span>
 				) : null}

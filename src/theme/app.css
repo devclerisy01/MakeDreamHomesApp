@@ -1,6 +1,36 @@
 /* Ionic-specific styling that Tailwind utilities can't reach (shadow parts,
    --ion-* vars) plus the skeleton shimmer keyframe. Everything else is Tailwind. */
 
+/* ---- Toast (modern floating pill) ------------------------------------- */
+.mdh-toast {
+	--border-radius: 14px;
+	--box-shadow: 0 10px 30px rgba(16, 24, 40, 0.18);
+	--min-height: 52px;
+	font-weight: 600;
+	text-align: left;
+}
+.mdh-toast::part(container) {
+	padding: 4px 6px;
+}
+.mdh-toast::part(message) {
+	font-size: 13px;
+	line-height: 1.35;
+}
+.mdh-toast::part(icon) {
+	font-size: 20px;
+	margin-inline-end: 4px;
+}
+
+/* ---- Filter FAB (48×36 rounded rect, per Figma) ------------------------ */
+.mdh-fab {
+	--background: var(--mdh-primary);
+	--background-activated: var(--mdh-primary-dark);
+	--border-radius: 9999px;
+	--box-shadow: 0 6px 16px rgba(38, 66, 139, 0.35);
+	width: 48px;
+	height: 36px;
+}
+
 /* ---- Bottom tab bar ---------------------------------------------------- */
 .mdh-tab-bar {
 	--background: #ffffff;
@@ -9,11 +39,11 @@
 	padding-bottom: env(safe-area-inset-bottom);
 }
 .mdh-tab-bar ion-tab-button {
-	--color: var(--mdh-muted-2);
+	--color: var(--mdh-ink);
 	--color-selected: var(--mdh-primary);
 }
 .mdh-tab-bar ion-tab-button ion-label {
-	font-size: 11px;
+	font-size: 10px;
 	font-weight: 600;
 	margin-top: 2px;
 }

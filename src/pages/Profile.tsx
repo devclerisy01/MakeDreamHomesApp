@@ -183,7 +183,7 @@ export default function Profile() {
 	if (!isAuthed || !user) {
 		return (
 			<IonPage>
-				<AppHeader title="Profile" />
+				<AppHeader title="Profile" tinted />
 				<IonContent>
 					<Container>
 						<div className="mt-6 flex flex-col items-center px-6 py-10 text-center">
@@ -279,7 +279,7 @@ export default function Profile() {
 
 	return (
 		<IonPage>
-			<AppHeader title={title} />
+			<AppHeader title={title} tinted />
 			<IonContent>
 				<IonRefresher
 					slot="fixed"

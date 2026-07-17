@@ -53,7 +53,7 @@ export function ProfessionalCard({
 						)}
 						<div className="flex shrink-0 items-center gap-1">
 							{pro.reviewCount > 0 ? (
-								<span className="inline-flex items-center gap-[3px] text-[11px] font-bold text-ink">
+								<span className="inline-flex items-center gap-[3px] text-[11px] font-medium text-ink">
 									<IonIcon icon={ICONS.star} className="text-[12px]" />
 									{pro.ratingAverage.toFixed(1)}
 									<span className="ml-0.5 text-[10px] font-medium text-primary">
@@ -61,23 +61,27 @@ export function ProfessionalCard({
 									</span>
 								</span>
 							) : null}
-							{showSave ? (
+						</div>
+					</div>
+
+					<div className="flex gap-1 justify-between relative pr-7">
+						<h3 className="mt-0.5 text-[12px] font-bold text-ink flex-1 wrap-break-word">
+							{pro.name}
+						</h3>
+						{showSave ? (
+							<div className="absolute -top-1 -right-1">
 								<SaveButton
 									entityType="users"
 									entityId={pro.id}
 									onToggle={onSaveToggle}
 								/>
-							) : null}
-						</div>
+							</div>
+						) : null}
 					</div>
-
-					<h3 className="mt-0.5 line-clamp-1 text-[12px] font-bold text-ink">
-						{pro.name}
-					</h3>
 
 					{/* Figma: Regular 10px */}
 					{pro.location ? (
-						<span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-muted-light">
+						<span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-black">
 							<IonIcon icon={ICONS.location} className="shrink-0 text-[12px]" />
 							<span className="truncate">{pro.location}</span>
 						</span>

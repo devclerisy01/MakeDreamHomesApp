@@ -11,7 +11,7 @@ export function CategoryTabs<T extends string>({
 	onChange,
 }: CategoryTabsProps<T>) {
 	return (
-		<div className="flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+		<div className="flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
 			{tabs.map((tab) => (
 				<button
 					key={tab.id}

@@ -6,10 +6,9 @@
  */
 export const REVIEW_SUB_CATEGORIES = [
 	{ key: "quality", icon: "🏠", label: "Quality of Work" },
-	{ key: "behaviour", icon: "💬", label: "Behaviour" },
+	{ key: "behaviour", icon: "💬", label: "Behaviour & Communication" },
 	{ key: "timeliness", icon: "⏱️", label: "Timeliness" },
-	{ key: "communication", icon: "📋", label: "Communication" },
-	{ key: "price", icon: "💰", label: "Price" },
+	{ key: "communication", icon: "📋", label: "Transparency & Honesty" },
 ] as const;
 
 /** A numeric rating field key on a review / breakdown (`quality`, `price`, …). */

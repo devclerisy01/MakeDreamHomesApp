@@ -28,7 +28,6 @@ const EMPTY: Ratings = {
 	behaviour: 0,
 	timeliness: 0,
 	communication: 0,
-	price: 0,
 };
 
 /**
@@ -73,7 +72,8 @@ export function WriteReviewModal({
 				behaviour: ratings.behaviour,
 				timeliness: ratings.timeliness,
 				communication: ratings.communication,
-				price: ratings.price,
+				// Price category was removed from the UI; API still expects the field.
+				price: 0,
 				...(comment.trim() ? { comment: comment.trim() } : {}),
 			});
 			// Success is toasted centrally (reviews.submitted).

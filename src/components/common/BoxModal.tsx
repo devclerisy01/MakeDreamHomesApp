@@ -37,9 +37,9 @@ export function BoxModal({
 			}
 		>
 			<div className="flex max-h-[86vh] flex-col bg-white">
-				<div className="flex shrink-0 items-start justify-between gap-4 px-5 pt-5">
+				<div className="flex shrink-0 items-center justify-between gap-4 px-5 pt-5">
 					<div className="min-w-0">
-						<h2 className="m-0 text-lg font-extrabold text-ink">{title}</h2>
+						<h2 className="m-0 text-base font-extrabold text-ink">{title}</h2>
 						{subtitle ? (
 							<p className="mt-0.5 text-sm text-muted-light">{subtitle}</p>
 						) : null}

@@ -242,7 +242,7 @@ export function leadIntentChip(category: string): string | null {
 	if (c.startsWith("buy")) return "Buy";
 	if (c.startsWith("sell")) return "Sell";
 	if (c.startsWith("hire")) return "Hiring";
-	if (c.startsWith("available")) return "Available for work";
+	if (c.startsWith("available")) return "Available";
 	return null;
 }
 

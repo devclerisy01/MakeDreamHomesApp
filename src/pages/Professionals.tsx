@@ -9,11 +9,7 @@ import {
 	IonRefresher,
 	IonRefresherContent,
 } from "@ionic/react";
-import {
-	alertCircleOutline,
-	optionsOutline,
-	peopleOutline,
-} from "ionicons/icons";
+import { alertCircleOutline, peopleOutline } from "ionicons/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -47,6 +43,7 @@ import {
 } from "@/lib/api/professionals";
 import { locationToGeo, useSelectedLocation } from "@/lib/geo/location-store";
 import { LIST_GRID } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
 import type { DirectoryCategoryId } from "@/types";
 
 // Matches the web sort dropdown: Latest + Top Rated, plus Nearest only when a
@@ -229,8 +226,8 @@ export default function Professionals() {
 
 	return (
 		<IonPage>
-			<AppHeader title="Professionals" showLocation />
-			<IonContent>
+			<AppHeader title="Professionals" tinted showLocation />
+			<IonContent style={{ "--background": "#f6f7fb" } as React.CSSProperties}>
 				<IonRefresher
 					slot="fixed"
 					onIonRefresh={(event) => {
@@ -241,60 +238,70 @@ export default function Professionals() {
 					<IonRefresherContent />
 				</IonRefresher>
 
-				<Container>
-					<SearchBar
-						key={urlSearch}
-						defaultValue={urlSearch}
-						onSearch={setSearch}
+				<div className="relative">
+					{/* Light-blue gradient backdrop behind the search + tabs. */}
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-x-0 top-0 h-[180px] bg-gradient-to-b from-[#e8f3fc] to-[#f6f7fb]"
 					/>
-					<div className="mt-3">
-						<CategoryTabs
-							tabs={DIRECTORY_TABS}
-							active={category}
-							onChange={setCategory}
-						/>
-					</div>
-
-					<div className="mt-3.5">
-						{status === "loading" ? (
-							<SkeletonList count={5} variant="pro" />
-						) : status === "error" ? (
-							<EmptyState
-								icon={alertCircleOutline}
-								message="Couldn't load professionals. Pull down to retry."
+					<Container>
+						<div className="relative z-10">
+							<SearchBar
+								key={urlSearch}
+								defaultValue={urlSearch}
+								onSearch={setSearch}
 							/>
-						) : items.length === 0 ? (
-							<EmptyState
-								icon={peopleOutline}
-								message="No professionals match your filters."
-							/>
-						) : (
-							<div className={LIST_GRID}>
-								{items.map((pro) => (
-									<ProfessionalCard key={pro.id} pro={pro} />
-								))}
+							<div className="mt-3">
+								<CategoryTabs
+									tabs={DIRECTORY_TABS}
+									active={category}
+									onChange={setCategory}
+								/>
 							</div>
-						)}
-					</div>
+						</div>
 
-					<IonInfiniteScroll
-						disabled={!hasMore || status !== "ready"}
-						onIonInfinite={(event) => {
-							void loadMore().then(() =>
-								(event.target as HTMLIonInfiniteScrollElement).complete(),
-							);
-						}}
-					>
-						<IonInfiniteScrollContent />
-					</IonInfiniteScroll>
-				</Container>
+						<div className="relative z-10 mt-3.5">
+							{status === "loading" ? (
+								<SkeletonList count={5} variant="pro" />
+							) : status === "error" ? (
+								<EmptyState
+									icon={alertCircleOutline}
+									message="Couldn't load professionals. Pull down to retry."
+								/>
+							) : items.length === 0 ? (
+								<EmptyState
+									icon={peopleOutline}
+									message="No professionals match your filters."
+								/>
+							) : (
+								<div className={LIST_GRID}>
+									{items.map((pro) => (
+										<ProfessionalCard key={pro.id} pro={pro} />
+									))}
+								</div>
+							)}
+						</div>
+
+						<IonInfiniteScroll
+							disabled={!hasMore || status !== "ready"}
+							onIonInfinite={(event) => {
+								void loadMore().then(() =>
+									(event.target as HTMLIonInfiniteScrollElement).complete(),
+								);
+							}}
+						>
+							<IonInfiniteScrollContent />
+						</IonInfiniteScroll>
+					</Container>
+				</div>
 
 				<IonFab slot="fixed" vertical="bottom" horizontal="end">
 					<IonFabButton
 						aria-label="Filters"
+						className="mdh-fab"
 						onClick={() => setFiltersOpen(true)}
 					>
-						<IonIcon icon={optionsOutline} />
+						<IonIcon icon={ICONS.filters} className="text-white" />
 					</IonFabButton>
 					{activeFilterCount > 0 ? (
 						<span className="pointer-events-none absolute right-0 top-0 z-10 grid h-6 min-w-6 -translate-y-1 translate-x-1 place-items-center rounded-full border-2 border-white bg-danger px-1 text-xs font-bold text-white">
