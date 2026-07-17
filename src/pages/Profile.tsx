@@ -9,12 +9,9 @@ import {
 } from "@ionic/react";
 import {
 	addOutline,
-	createOutline,
-	heartOutline,
 	locationOutline,
+	mailOutline,
 	personCircleOutline,
-	personOutline,
-	shareSocialOutline,
 } from "ionicons/icons";
 import { useCallback, useEffect, useState } from "react";
 
@@ -45,15 +42,22 @@ import { getProfessionalDetail } from "@/lib/api/professionals";
 import { toastInfo } from "@/lib/api/toast";
 import { useLogin } from "@/lib/auth/login-gate";
 import { setStoredUser, useAuth } from "@/lib/auth/session";
-import { CARD, SECTION_HEAD, SECTION_TITLE, TAG_PRIMARY } from "@/lib/ui";
+import { SECTION_HEAD, SECTION_TITLE, TAG } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
 import type { Lead, ProfessionalDetail } from "@/types";
 
 type Tab = "overview" | "savedPros" | "savedLeads";
 
+/** Neutral profession chip on the identity card (Figma: grey fill, hairline border). */
+const PRO_TAG = `${TAG} border-line bg-[#F2F4F7] font-semibold text-ink`;
+/** Rounded grey square that frames each identity meta icon (location / email). */
+const META_ICON_BOX =
+	"flex size-[26px] shrink-0 items-center justify-center rounded-[6px] bg-[#F2F4F7]";
+
 const TABS: { id: Tab; label: string; icon: string }[] = [
-	{ id: "overview", label: "Overview", icon: personOutline },
-	{ id: "savedPros", label: "Saved Professionals", icon: heartOutline },
-	{ id: "savedLeads", label: "Saved Leads", icon: heartOutline },
+	{ id: "overview", label: "Overview", icon: ICONS.tabOverview },
+	{ id: "savedPros", label: "Saved Professionals", icon: ICONS.tabSaved },
+	{ id: "savedLeads", label: "Saved Leads", icon: ICONS.tabSaved },
 ];
 
 const filled = (value: string | null | undefined) => Boolean(value?.trim?.());
@@ -271,7 +275,7 @@ export default function Profile() {
 	const comingSoon = (what: string) => toastInfo(UI_MESSAGES.comingSoon(what));
 
 	const iconBtn =
-		"grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted";
+		"grid h-5 w-5 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted";
 	const addBtn =
 		"grid h-8 w-8 place-items-center rounded-full border border-line bg-white text-primary active:bg-surface-muted";
 	const emptyBox =
@@ -280,7 +284,7 @@ export default function Profile() {
 	return (
 		<IonPage>
 			<AppHeader title={title} tinted />
-			<IonContent>
+			<IonContent style={{ "--background": "#ffffff" } as React.CSSProperties}>
 				<IonRefresher
 					slot="fixed"
 					onIonRefresh={(event) => {
@@ -291,223 +295,260 @@ export default function Profile() {
 					<IonRefresherContent />
 				</IonRefresher>
 
-				<Container>
-					<div className="flex border-b border-line">
-						{TABS.map((item) => {
-							const active = item.id === tab;
-							return (
-								<button
-									key={item.id}
-									type="button"
-									onClick={() => setTab(item.id)}
-									className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-1 text-[12px] font-semibold ${
-										active
-											? "border-primary text-primary"
-											: "border-transparent text-muted-light"
-									}`}
-								>
-									<IonIcon icon={item.icon} className="text-base" />
-									{item.label}
-								</button>
-							);
-						})}
-					</div>
+				<div className="relative">
+					{/* Light-blue gradient backdrop behind the tabs (matches other pages). */}
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-x-0 top-0 h-[120px] bg-gradient-to-b from-[#e8f3fc] to-white"
+					/>
+					<div className="relative z-10">
+						<Container>
+							<div className="-mx-4 flex items-end gap-1 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+								{TABS.map((item) => {
+									const active = item.id === tab;
+									return (
+										<button
+											key={item.id}
+											type="button"
+											onClick={() => setTab(item.id)}
+											className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-5 py-3.5 text-[12px] font-semibold transition-colors rounded-tl-[20px] rounded-tr-[20px] ${
+												active ? "mdh-tab-active text-ink" : "text-muted-light"
+											}`}
+										>
+											<IonIcon icon={item.icon} className="text-base" />
+											{item.label}
+										</button>
+									);
+								})}
+							</div>
 
-					{tab === "savedPros" ? (
-						// Distinct keys force a fresh mount per entity — otherwise the
-						// reused instance briefly renders the previous tab's items with the
-						// wrong card (e.g. a Lead as a ProfessionalCard) and crashes.
-						<SavedList key="saved-users" entity="users" />
-					) : tab === "savedLeads" ? (
-						<SavedList key="saved-leads" entity="leads" />
-					) : (
-						<div className="mt-4 flex flex-col gap-4">
-							{/* ---- Identity ---- */}
-							<section className={`p-4 ${CARD}`}>
-								<div className="flex gap-3.5">
-									<Avatar
-										name={title}
-										image={photo}
-										size={84}
-										className="self-start rounded-2xl"
-									/>
-									<div className="min-w-0 flex-1">
-										<div className="flex items-start justify-between gap-2">
-											{profession ? (
-												<span className={TAG_PRIMARY}>{profession}</span>
-											) : (
-												<span />
-											)}
-											<div className="flex shrink-0 gap-1.5">
-												<button
-													type="button"
-													aria-label="Share profile"
-													className={iconBtn}
-													onClick={() => comingSoon("Sharing")}
-												>
-													<IonIcon icon={shareSocialOutline} />
-												</button>
-												<button
-													type="button"
-													aria-label="Edit profile"
-													className={iconBtn}
-													onClick={() => setEditOpen(true)}
-												>
-													<IonIcon icon={createOutline} />
-												</button>
+							{tab === "savedPros" ? (
+								// Distinct keys force a fresh mount per entity — otherwise the
+								// reused instance briefly renders the previous tab's items with the
+								// wrong card (e.g. a Lead as a ProfessionalCard) and crashes.
+								<SavedList key="saved-users" entity="users" />
+							) : tab === "savedLeads" ? (
+								<SavedList key="saved-leads" entity="leads" />
+							) : (
+								<div className="flex flex-col gap-4 -mx-4 px-4 bg-white pt-4">
+									{/* ---- Identity ---- */}
+									<section>
+										<div className="flex gap-3.5">
+											<Avatar
+												name={title}
+												image={photo}
+												size={118}
+												className="self-start rounded-2xl"
+											/>
+											<div className="min-w-0 flex-1">
+												<div className="flex items-start justify-between gap-2">
+													{profession ? (
+														<span className={PRO_TAG}>{profession}</span>
+													) : (
+														<span />
+													)}
+													<div className="flex shrink-0 gap-1.5">
+														<button
+															type="button"
+															aria-label="Share profile"
+															className={iconBtn}
+															onClick={() => comingSoon("Sharing")}
+														>
+															<IonIcon
+																icon={ICONS.share}
+																className="text-[11px]"
+															/>
+														</button>
+														<button
+															type="button"
+															aria-label="Edit profile"
+															className={iconBtn}
+															onClick={() => setEditOpen(true)}
+														>
+															<IonIcon
+																icon={ICONS.edit}
+																className="text-[11px]"
+															/>
+														</button>
+													</div>
+												</div>
+												<h2 className="mt-1.5 text-sm font-bold leading-tight text-ink">
+													{title}
+												</h2>
+												{showOwner ? (
+													<p className="m-0 text-[10px] text-muted-light">
+														By{" "}
+														<span className="font-semibold text-ink">
+															{owner}
+														</span>
+													</p>
+												) : null}
+
+												{location ? (
+													<div className="mt-2 flex items-center gap-2 leading-none">
+														<span className={META_ICON_BOX}>
+															<IonIcon
+																icon={locationOutline}
+																className="text-[12px] text-muted-light"
+															/>
+														</span>
+														<div className="min-w-0">
+															<span className="block text-[10px] font-medium text-muted-light">
+																Location
+															</span>
+															<span className="text-[12px] font-semibold text-ink">
+																{location}
+															</span>
+														</div>
+													</div>
+												) : null}
+												{user.email ? (
+													<div className="mt-2 flex items-center gap-2 leading-none">
+														<span className={META_ICON_BOX}>
+															<IonIcon
+																icon={mailOutline}
+																className="text-[15px] text-muted-light"
+															/>
+														</span>
+														<div className="min-w-0">
+															<span className="block text-[11px] font-medium text-muted-light">
+																Email
+															</span>
+															<span className="block truncate text-[13.5px] font-bold text-ink">
+																{user.email}
+															</span>
+														</div>
+													</div>
+												) : null}
 											</div>
 										</div>
-										<h2 className="mt-1.5 text-xl font-extrabold leading-tight text-ink">
-											{title}
-										</h2>
-										{showOwner ? (
-											<p className="m-0 text-[13px] text-muted-light">
-												By{" "}
-												<span className="font-semibold text-ink">{owner}</span>
-											</p>
-										) : null}
 
-										{location ? (
-											<div className="mt-2.5 flex items-start gap-1.5">
-												<IonIcon
-													icon={locationOutline}
-													className="mt-0.5 shrink-0 text-[16px] text-muted-light"
+										{about ? (
+											<div className="mt-3">
+												<span className="mb-0.5 block text-xs font-bold text-ink">
+													About
+												</span>
+												<ReadMoreText
+													text={about}
+													lines={4}
+													title="About"
+													className="m-0 text-[11px] font-medium leading text-muted"
 												/>
-												<div className="min-w-0">
-													<span className="block text-[11px] font-semibold text-muted-light">
-														Location
-													</span>
-													<span className="text-[13.5px] font-semibold text-ink">
-														{location}
-													</span>
-												</div>
 											</div>
 										) : null}
-									</div>
-								</div>
+									</section>
 
-								{about ? (
-									<div className="mt-3">
-										<span className="mb-0.5 block text-xs font-bold text-muted-light">
-											About
-										</span>
-										<ReadMoreText
-											text={about}
-											lines={4}
-											title="About"
-											className="m-0 text-[13.5px] leading-relaxed text-muted"
+									{/* ---- Completion ---- */}
+									{percent < 100 ? (
+										<section className="flex items-center justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-r from-[#0b1220] via-[#1c3259] to-primary p-4 text-white">
+											<div className="min-w-0">
+												<h3 className="m-0 text-base font-extrabold">
+													Complete Your Profile
+												</h3>
+												<p className="mt-1 text-xs leading-snug text-white/70">
+													Add the missing details to build trust and get more
+													leads.
+												</p>
+											</div>
+											<CompletionRing percent={percent} />
+										</section>
+									) : null}
+
+									{/* ---- Portfolio ---- */}
+									<section>
+										<div className={SECTION_HEAD}>
+											<h2 className={SECTION_TITLE}>Portfolio</h2>
+											<button
+												type="button"
+												aria-label="Add portfolio item"
+												className={addBtn}
+												onClick={() => setAddPortfolioOpen(true)}
+											>
+												<IonIcon icon={addOutline} className="text-lg" />
+											</button>
+										</div>
+										{myPortfolio === null ? (
+											<PortfolioGridSkeleton
+												count={4}
+												className="grid grid-cols-2 gap-3.5"
+											/>
+										) : portfolio.length ? (
+											<div className="grid grid-cols-2 gap-3.5">
+												{portfolio.map((item) => (
+													<PortfolioTile
+														key={item.id}
+														item={item}
+														pending={item.pending}
+														onEdit={
+															myPortfolio
+																? () => {
+																		const full = myPortfolio.find(
+																			(p) => p.id === item.id,
+																		);
+																		if (full) setEditEntry(full);
+																	}
+																: undefined
+														}
+														onDelete={
+															myPortfolio
+																? () => confirmDeletePortfolio(item.id)
+																: undefined
+														}
+													/>
+												))}
+											</div>
+										) : (
+											<p className={emptyBox}>
+												No portfolio yet. Add your projects to showcase your
+												work.
+											</p>
+										)}
+									</section>
+
+									{/* ---- My Leads ---- */}
+									<section>
+										<div className={SECTION_HEAD}>
+											<h2 className={SECTION_TITLE}>My Leads</h2>
+											<button
+												type="button"
+												aria-label="Post a requirement"
+												className={addBtn}
+												onClick={() => router.push(ROUTES.requirement)}
+											>
+												<IonIcon icon={addOutline} className="text-lg" />
+											</button>
+										</div>
+										{myLeads === null ? (
+											<SkeletonList count={3} variant="lead" />
+										) : leads.length ? (
+											<div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+												{leads.map((lead) => (
+													<MyLeadCard
+														key={lead.id}
+														lead={lead}
+														onEdit={() => comingSoon("Editing requirements")}
+													/>
+												))}
+											</div>
+										) : (
+											<p className={emptyBox}>
+												You haven&apos;t posted any requirements yet.
+											</p>
+										)}
+									</section>
+
+									{/* ---- Rating & Reviews ---- */}
+									{hasReviews && detail?.reviewsBreakdown ? (
+										<RatingBreakdown
+											breakdown={detail.reviewsBreakdown}
+											count={detail.reviewsCount}
 										/>
-									</div>
-								) : null}
-							</section>
-
-							{/* ---- Completion ---- */}
-							{percent < 100 ? (
-								<section className="flex items-center justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-r from-[#0b1220] via-[#1c3259] to-primary p-4 text-white">
-									<div className="min-w-0">
-										<h3 className="m-0 text-base font-extrabold">
-											Complete Your Profile
-										</h3>
-										<p className="mt-1 text-xs leading-snug text-white/70">
-											Add the missing details to build trust and get more leads.
-										</p>
-									</div>
-									<CompletionRing percent={percent} />
-								</section>
-							) : null}
-
-							{/* ---- Portfolio ---- */}
-							<section>
-								<div className={SECTION_HEAD}>
-									<h2 className={SECTION_TITLE}>Portfolio</h2>
-									<button
-										type="button"
-										aria-label="Add portfolio item"
-										className={addBtn}
-										onClick={() => setAddPortfolioOpen(true)}
-									>
-										<IonIcon icon={addOutline} className="text-lg" />
-									</button>
+									) : null}
 								</div>
-								{myPortfolio === null ? (
-									<PortfolioGridSkeleton
-										count={4}
-										className="grid grid-cols-2 gap-3.5"
-									/>
-								) : portfolio.length ? (
-									<div className="grid grid-cols-2 gap-3.5">
-										{portfolio.map((item) => (
-											<PortfolioTile
-												key={item.id}
-												item={item}
-												pending={item.pending}
-												onEdit={
-													myPortfolio
-														? () => {
-																const full = myPortfolio.find(
-																	(p) => p.id === item.id,
-																);
-																if (full) setEditEntry(full);
-															}
-														: undefined
-												}
-												onDelete={
-													myPortfolio
-														? () => confirmDeletePortfolio(item.id)
-														: undefined
-												}
-											/>
-										))}
-									</div>
-								) : (
-									<p className={emptyBox}>
-										No portfolio yet. Add your projects to showcase your work.
-									</p>
-								)}
-							</section>
-
-							{/* ---- My Leads ---- */}
-							<section>
-								<div className={SECTION_HEAD}>
-									<h2 className={SECTION_TITLE}>My Leads</h2>
-									<button
-										type="button"
-										aria-label="Post a requirement"
-										className={addBtn}
-										onClick={() => router.push(ROUTES.requirement)}
-									>
-										<IonIcon icon={addOutline} className="text-lg" />
-									</button>
-								</div>
-								{myLeads === null ? (
-									<SkeletonList count={3} variant="lead" />
-								) : leads.length ? (
-									<div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-										{leads.map((lead) => (
-											<MyLeadCard
-												key={lead.id}
-												lead={lead}
-												onEdit={() => comingSoon("Editing requirements")}
-											/>
-										))}
-									</div>
-								) : (
-									<p className={emptyBox}>
-										You haven&apos;t posted any requirements yet.
-									</p>
-								)}
-							</section>
-
-							{/* ---- Rating & Reviews ---- */}
-							{hasReviews && detail?.reviewsBreakdown ? (
-								<RatingBreakdown
-									breakdown={detail.reviewsBreakdown}
-									count={detail.reviewsCount}
-								/>
-							) : null}
-						</div>
-					)}
-				</Container>
+							)}
+						</Container>
+					</div>
+				</div>
 
 				<EditProfileModal
 					user={user}

@@ -35,7 +35,6 @@ import {
 	chevronDownOutline,
 	chevronForwardOutline,
 	closeOutline,
-	createOutline,
 	cubeOutline,
 	globeOutline,
 	heart,
@@ -49,7 +48,6 @@ import {
 	peopleOutline,
 	personOutline,
 	search,
-	shareSocialOutline,
 	starHalf,
 	starOutline,
 	timeOutline,
@@ -62,6 +60,8 @@ import {
 import iconActiveLeads from "@/assets/icons/active-leads.svg";
 import iconBudget from "@/assets/icons/budget.svg";
 import iconCategoryProperty from "@/assets/icons/category-property.svg";
+import iconEdit from "@/assets/icons/edit.svg";
+import iconShare from "@/assets/icons/share.svg";
 import iconInfo from "@/assets/icons/info.svg";
 import iconLocation from "@/assets/icons/location.svg";
 import iconMenu from "@/assets/icons/menu.svg";
@@ -70,6 +70,8 @@ import iconReqMaterial from "@/assets/icons/req-material.svg";
 import iconReqProfessionals from "@/assets/icons/req-professionals.svg";
 import iconReqProperty from "@/assets/icons/req-property.svg";
 import iconNotifications from "@/assets/icons/notifications.svg";
+import iconOverview from "@/assets/icons/overview.svg";
+import iconSaved from "@/assets/icons/saved.svg";
 import iconSparkles from "@/assets/icons/sparkles.svg";
 import iconStarFill from "@/assets/icons/star-fill.svg";
 import iconTabHome from "@/assets/icons/tab-home.svg";
@@ -145,7 +147,11 @@ export const ICONS = {
 	// ── Save / share ────────────────────────────────────────────────────
 	saved: heart,
 	save: heartOutline,
-	share: shareSocialOutline,
+	share: iconShare, // custom (link/share)
+
+	// ── Profile tabs (custom Figma glyphs) ──────────────────────────────
+	tabOverview: iconOverview, // custom (person)
+	tabSaved: iconSaved, // custom (heart)
 
 	// ── Actions / controls ──────────────────────────────────────────────
 	arrowForward: arrowForward,
@@ -153,7 +159,7 @@ export const ICONS = {
 	chevronForward: chevronForwardOutline,
 	close: closeOutline,
 	add: addOutline,
-	edit: createOutline,
+	edit: iconEdit, // custom (pencil)
 	check: checkmark,
 	checkOutline: checkmarkOutline,
 	filters: optionsOutline,

@@ -1,23 +1,25 @@
 import { IonIcon } from "@ionic/react";
-import {
-	createOutline,
-	locationOutline,
-	timeOutline,
-	walletOutline,
-} from "ionicons/icons";
+import { createOutline } from "ionicons/icons";
 import { useState } from "react";
 
 import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
-import { useClampOverflow } from "@/hooks/useClampOverflow";
+import { leadBaseCategory, leadIntentChip } from "@/lib/api/leads";
 import { formatBudget, timeAgo } from "@/lib/format";
-import { CARD, META, TAG_MUTED } from "@/lib/ui";
-import type { Lead } from "@/types";
+import { CARD } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
+import type { Lead, LeadCategoryId } from "@/types";
+
+const CATEGORY_ICON: Record<LeadCategoryId, string> = {
+	property: ICONS.categoryProperty,
+	material: ICONS.categoryMaterial,
+	professional: ICONS.categoryProfessional,
+};
 
 /**
- * The signed-in user's own lead, styled per the profile "My Leads" design:
- * title + edit affordance, location, estimated price, then tags and a
- * "Posted …" timestamp under a divider. Clamps the title and reveals "Read more"
- * (→ full-detail popup) when there's more than the card shows.
+ * The signed-in user's own lead, styled to match the public {@link LeadCard}
+ * (category icon tile with a BUY/SELL badge, title, tags, and a divider row with
+ * location + estimated price) — plus an owner edit affordance. Tapping the card
+ * opens the full-detail popup.
  */
 export function MyLeadCard({
 	lead,
@@ -26,87 +28,94 @@ export function MyLeadCard({
 	lead: Lead;
 	onEdit?: () => void;
 }) {
-	const title = lead.summary?.trim() || lead.description;
+	const intent = leadIntentChip(lead.category);
+	const intentColor =
+		intent === "Buy"
+			? "border-blue-200 text-blue-600"
+			: "border-rose-200 text-rose-600";
+	const icon = CATEGORY_ICON[leadBaseCategory(lead.category)];
+	const title = lead.description?.trim() || lead.summary?.trim() || "";
 	const budget = formatBudget(lead.budget);
 	const tags = (lead.tags ?? []).slice(0, 3);
 	const posted = timeAgo(lead.createdAt);
 
-	const { ref: headingRef, overflows } =
-		useClampOverflow<HTMLHeadingElement>(title);
 	const [detailsOpen, setDetailsOpen] = useState(false);
-	const hasFullerDescription = Boolean(
-		lead.summary?.trim() &&
-		lead.description?.trim() &&
-		lead.description.trim() !== lead.summary.trim(),
-	);
-	const hasMore =
-		overflows || hasFullerDescription || (lead.images?.length ?? 0) > 0;
 
 	return (
-		<div className={`p-4 ${CARD}`}>
-			<div className="flex items-start justify-between gap-2">
-				<h3
-					ref={headingRef}
-					className="m-0 line-clamp-3 text-[15px] font-bold leading-snug text-ink"
-				>
-					{title}
-				</h3>
-				{onEdit ? (
-					<button
-						type="button"
-						onClick={onEdit}
-						aria-label="Edit requirement"
-						className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted"
-					>
-						<IonIcon icon={createOutline} />
-					</button>
-				) : null}
-			</div>
-			{hasMore ? (
-				<button
-					type="button"
-					onClick={() => setDetailsOpen(true)}
-					className="mt-1 text-xs font-bold text-primary"
-				>
-					Read more
-				</button>
-			) : null}
-
-			<div className="mt-2.5 flex flex-col gap-1.5">
-				{lead.location ? (
-					<span className={META}>
-						<IonIcon icon={locationOutline} className="shrink-0 text-[15px]" />
-						<span className="truncate">{lead.location}</span>
-					</span>
-				) : null}
-				{budget ? (
-					<span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink">
-						<IonIcon
-							icon={walletOutline}
-							className="text-[15px] text-muted-light"
-						/>
-						Est. Price: {budget}
-					</span>
-				) : null}
-			</div>
-
-			{tags.length || posted ? (
-				<div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">
-					<div className="flex flex-wrap gap-1.5">
-						{tags.map((tag) => (
-							<span key={tag} className={TAG_MUTED}>
-								{tag}
+		<>
+			<div
+				className={`cursor-pointer p-3 ${CARD}`}
+				onClick={() => setDetailsOpen(true)}
+			>
+				<div className="flex gap-3">
+					<div className="relative grid h-[42px] w-[42px] shrink-0 place-items-center rounded-md bg-[#f2f4f7]">
+						<IonIcon icon={icon} className="text-[21px] text-[#14181f]" />
+						{intent ? (
+							<span
+								className={`absolute -bottom-1.5 left-1/2 flex h-[14px] -translate-x-1/2 items-center justify-center rounded-[4px] border bg-white px-1.5 text-[7.5px] font-black uppercase tracking-wider shadow-[0_1px_2px_rgba(0,0,0,0.05)] ${intentColor}`}
+							>
+								{intent}
 							</span>
-						))}
+						) : null}
 					</div>
-					{posted ? (
-						<span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs text-muted-light">
-							<IonIcon icon={timeOutline} />
-							Posted {posted}
+
+					<div className="min-w-0 flex-1">
+						<div className="flex items-start justify-between gap-2">
+							<h3 className="m-0 line-clamp-2 text-[12px] font-bold leading-snug text-ink">
+								{title}
+							</h3>
+							{onEdit ? (
+								<button
+									type="button"
+									onClick={(event) => {
+										event.stopPropagation();
+										onEdit();
+									}}
+									aria-label="Edit requirement"
+									className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted"
+								>
+									<IonIcon icon={createOutline} className="text-[15px]" />
+								</button>
+							) : null}
+						</div>
+						<div className="mt-2 flex flex-wrap items-center gap-1.5">
+							{tags.map((tag) => (
+								<span
+									key={tag}
+									className="inline-flex items-center whitespace-nowrap rounded-[4px] border border-[#d7dded] bg-[#f1f4fc] px-[7px] py-1 text-[8px] font-medium capitalize leading-none text-[#6f7791]"
+								>
+									{tag}
+								</span>
+							))}
+							{posted ? (
+								<span className="ml-auto whitespace-nowrap text-[10px] text-[#868686]">
+									{posted}
+								</span>
+							) : null}
+						</div>
+					</div>
+				</div>
+
+				<div className="mt-2.5 flex items-center justify-between gap-2.5 border-t border-line pt-2.5">
+					{lead.location ? (
+						<span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-[#6f7791]">
+							<IonIcon icon={ICONS.location} className="shrink-0 text-[12px]" />
+							<span className="truncate">{lead.location}</span>
+						</span>
+					) : (
+						<span />
+					)}
+					{budget ? (
+						<span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[10px] text-ink">
+							<IonIcon
+								icon={ICONS.budget}
+								className="text-[12px] text-muted-light"
+							/>
+							Est. Price: <span className="font-bold">{budget}</span>
 						</span>
 					) : null}
 				</div>
-			) : null}
+			</div>
 
 			<LeadDetailsModal
 				lead={lead}
@@ -114,6 +123,6 @@ export function MyLeadCard({
 				onClose={() => setDetailsOpen(false)}
 				owned
 			/>
-		</div>
+		</>
 	);
 }

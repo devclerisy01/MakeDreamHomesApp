@@ -1,7 +1,8 @@
 import { IonIcon } from "@ionic/react";
-import { createOutline, locationOutline, trashOutline } from "ionicons/icons";
+import { createOutline, trashOutline } from "ionicons/icons";
 
 import { getImageSrc } from "@/lib/format";
+import { ICONS } from "@/theme/icons";
 import type { PortfolioItem } from "@/types";
 
 /**
@@ -36,7 +37,7 @@ export function PortfolioTile({
 				/>
 			) : null}
 			{pending ? (
-				<span className="absolute left-2 top-2 rounded-md bg-amber-400/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">
+				<span className="absolute left-2 top-2 rounded-md bg-amber-400/95 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-ink">
 					Pending
 				</span>
 			) : null}
@@ -64,15 +65,15 @@ export function PortfolioTile({
 					) : null}
 				</div>
 			) : null}
-			<div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-3 pb-3 pt-10">
+			<div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/100 via-black/30 to-transparent px-3 pb-3 pt-10">
 				{item.title ? (
 					<h4 className="m-0 line-clamp-1 text-sm font-bold text-white">
 						{item.title}
 					</h4>
 				) : null}
 				{place ? (
-					<span className="mt-0.5 flex items-center gap-1 text-[11px] text-white/85">
-						<IonIcon icon={locationOutline} className="text-xs" />
+					<span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-white/85">
+						<IonIcon icon={ICONS.location} className="text-sm" />
 						{place}
 					</span>
 				) : null}

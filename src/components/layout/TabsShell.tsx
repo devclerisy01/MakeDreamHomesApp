@@ -8,6 +8,7 @@ import {
 } from "@ionic/react";
 import { Redirect, Route } from "react-router-dom";
 
+import { Avatar } from "@/components/common/Avatar";
 import { ICONS } from "@/theme/icons";
 
 import { useLogin } from "@/lib/auth/login-gate";
@@ -25,8 +26,15 @@ import Requirement from "@/pages/Requirement";
  * other), so there are no auth routes.
  */
 export function TabsShell() {
-	const { isAuthed } = useAuth();
+	const { isAuthed, user } = useAuth();
 	const { openLogin } = useLogin();
+
+	const profileName =
+		[user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
+		user?.businessName?.trim() ||
+		"Profile";
+	// Footer tab label: the user's first name once signed in, else "Profile".
+	const profileLabel = user?.firstName?.trim() || "Profile";
 
 	return (
 		<IonTabs>
@@ -73,8 +81,17 @@ export function TabsShell() {
 				</IonTabButton>
 				{isAuthed ? (
 					<IonTabButton tab="profile" href="/profile">
-						<IonIcon icon={ICONS.tabProfile} />
-						<IonLabel>Profile</IonLabel>
+						{user?.profilePhoto ? (
+							<Avatar
+								name={profileName}
+								image={user.profilePhoto}
+								size={24}
+								className="!rounded-full"
+							/>
+						) : (
+							<IonIcon icon={ICONS.tabProfile} />
+						)}
+						<IonLabel className="truncate">{profileLabel}</IonLabel>
 					</IonTabButton>
 				) : (
 					<IonTabButton

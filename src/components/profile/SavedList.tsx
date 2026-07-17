@@ -37,7 +37,7 @@ export function SavedList({ entity }: { entity: "users" | "leads" }) {
 	};
 
 	return (
-		<div className="mt-3.5">
+		<div className="gap-4 -mx-4 px-4 bg-white pt-4">
 			{status === "loading" ? (
 				<SkeletonList count={3} variant={entity === "users" ? "pro" : "lead"} />
 			) : status === "error" ? (

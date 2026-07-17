@@ -3,6 +3,7 @@ import {
 	IonIcon,
 	IonMenuToggle,
 	IonToolbar,
+	useIonActionSheet,
 	useIonRouter,
 } from "@ionic/react";
 import { useEffect, useState } from "react";
@@ -16,6 +17,12 @@ import {
 	useSelectedLocation,
 } from "@/lib/geo/location-store";
 import { ICONS } from "@/theme/icons";
+
+const LANGUAGES = [
+	{ code: "en", label: "English" },
+	{ code: "hi", label: "हिन्दी" },
+	{ code: "pa", label: "ਪੰਜਾਬੀ" },
+];
 
 interface AppHeaderProps {
 	title?: string;
@@ -45,6 +52,29 @@ export function AppHeader({
 	const location = useSelectedLocation();
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [cities, setCities] = useState<CityOption[]>([]);
+	const [lang, setLang] = useState("en");
+	const [presentLangSheet] = useIonActionSheet();
+	const activeLang = LANGUAGES.find((l) => l.code === lang)?.label ?? "English";
+
+	function openLanguageSheet() {
+		presentLangSheet({
+			mode: "ios",
+			header: "Language",
+			cssClass: "mdh-lang-sheet",
+			buttons: [
+				...LANGUAGES.map((l) => ({
+					text: l.label,
+					role: l.code === lang ? "selected" : undefined,
+					handler: () => setLang(l.code),
+				})),
+				{
+					text: "Cancel",
+					role: "cancel" as const,
+					cssClass: "mdh-sheet-cancel",
+				},
+			],
+		});
+	}
 
 	// Load verified cities once, the first time the picker opens (module-cached,
 	// so it's cheap across every page's header instance).
@@ -121,14 +151,19 @@ export function AppHeader({
 								<IonIcon icon={ICONS.chevronDown} className="text-[10px]" />
 							</button>
 						) : null}
-						{/* English-only for now — a static indicator, not a dead dropdown. */}
-						<span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2 py-1 text-[11px] font-medium text-ink">
+						<button
+							type="button"
+							onClick={openLanguageSheet}
+							aria-label="Change language"
+							className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2 py-1 text-[11px] font-medium text-ink"
+						>
 							<IonIcon
 								icon={ICONS.language}
 								className="text-[13px] text-muted-light"
 							/>
-							English
-						</span>
+							{activeLang}
+							<IonIcon icon={ICONS.chevronDown} className="text-[10px]" />
+						</button>
 					</div>
 				</div>
 			</IonToolbar>

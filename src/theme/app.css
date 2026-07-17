@@ -1,6 +1,52 @@
 /* Ionic-specific styling that Tailwind utilities can't reach (shadow parts,
    --ion-* vars) plus the skeleton shimmer keyframe. Everything else is Tailwind. */
 
+/* ---- Profile active tab (raised notch with concave bottom corners) ---- */
+.mdh-tab-active {
+	position: relative;
+	background: #ffffff;
+	border-top-left-radius: 20px;
+	border-top-right-radius: 20px;
+}
+/* The two outward-curving "ears" at the tab's base: a white square masked by a
+   radial gradient so it reads as the surrounding area curving into the tab. */
+.mdh-tab-active::before,
+.mdh-tab-active::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	width: 20px;
+	height: 20px;
+	background: #ffffff;
+}
+.mdh-tab-active::before {
+	left: -20px;
+	-webkit-mask: radial-gradient(circle at top left, transparent 20px, #fff 21px);
+	mask: radial-gradient(circle at top left, transparent 20px, #fff 21px);
+}
+.mdh-tab-active::after {
+	right: -20px;
+	-webkit-mask: radial-gradient(
+		circle at top right,
+		transparent 20px,
+		#fff 21px
+	);
+	mask: radial-gradient(circle at top right, transparent 20px, #fff 21px);
+}
+
+/* ---- Action sheet: red Cancel button ---------------------------------- */
+.mdh-sheet-cancel {
+	color: var(--mdh-danger, #ef4444) !important;
+	font-weight: 700 !important;
+}
+.mdh-sheet-cancel .action-sheet-button-inner {
+	color: var(--mdh-danger, #ef4444) !important;
+}
+/* Slightly smaller option text on the language sheet. */
+.mdh-lang-sheet .action-sheet-button .action-sheet-button-inner {
+	font-size: 15px;
+}
+
 /* ---- Toast (modern floating pill) ------------------------------------- */
 .mdh-toast {
 	--border-radius: 14px;

@@ -677,7 +677,7 @@ export default function Requirement() {
 										type="button"
 										aria-pressed={selected}
 										onClick={() => chooseType(option.type)}
-										className={`flex h-[92px] flex-col items-start justify-between rounded-[6px] border p-3 text-left transition-colors ${
+										className={`flex h-[110px] flex-col items-start justify-between rounded-[6px] border p-3 text-left transition-colors ${
 											selected
 												? "border-primary bg-[#f5f7fb]"
 												: "border-[#e3e6f0] bg-white"
