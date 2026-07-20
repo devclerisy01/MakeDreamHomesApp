@@ -1,13 +1,14 @@
 import { Capacitor } from "@capacitor/core";
-import { SplashScreen } from "@capacitor/splash-screen";
+import { SplashScreen as NativeSplash } from "@capacitor/splash-screen";
 import { IonApp, setupIonicReact } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { useEffect } from "react";
 
-import { SideMenu } from "@/components/layout/SideMenu";
 import { TabsShell } from "@/components/layout/TabsShell";
+import { SplashScreen } from "@/components/splash/SplashScreen";
 import { LoginGateProvider } from "@/lib/auth/login-gate";
 import { ensureLocationInitialized } from "@/lib/geo/location-store";
+import { useSplash } from "@/hooks/useSplash";
 
 /* Self-hosted Plus Jakarta Sans (weights the app uses: 400/500/600/700/800).
    Bundled by Vite so it works offline in the Capacitor WebView — no CDN. */
@@ -30,6 +31,10 @@ import "@/theme/app.css";
 setupIonicReact({ mode: "md" });
 
 const App: React.FC = () => {
+	// Animated web splash — shown once per session over the live homepage,
+	// then fades/scales out. Reduced-motion + session-skip handled in the hook.
+	const splash = useSplash();
+
 	// Bootstrap the selected city once (device location → nearest verified city,
 	// else the default). Idempotent — no-op when a city is already stored.
 	useEffect(() => {
@@ -48,7 +53,7 @@ const App: React.FC = () => {
 		let raf2 = 0;
 		const raf1 = requestAnimationFrame(() => {
 			raf2 = requestAnimationFrame(() => {
-				void SplashScreen.hide({ fadeOutDuration: 300 });
+				void NativeSplash.hide({ fadeOutDuration: 300 });
 			});
 		});
 		return () => {
@@ -61,10 +66,15 @@ const App: React.FC = () => {
 		<IonApp>
 			<IonReactRouter>
 				<LoginGateProvider>
-					<SideMenu />
 					<TabsShell />
 				</LoginGateProvider>
 			</IonReactRouter>
+			{/* Animated splash overlays the app, then fades into the homepage. */}
+			<SplashScreen
+				visible={splash.visible}
+				reducedMotion={splash.reducedMotion}
+				onDismiss={splash.dismiss}
+			/>
 		</IonApp>
 	);
 };

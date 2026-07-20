@@ -21,7 +21,11 @@
 }
 .mdh-tab-active::before {
 	left: -20px;
-	-webkit-mask: radial-gradient(circle at top left, transparent 20px, #fff 21px);
+	-webkit-mask: radial-gradient(
+		circle at top left,
+		transparent 20px,
+		#fff 21px
+	);
 	mask: radial-gradient(circle at top left, transparent 20px, #fff 21px);
 }
 .mdh-tab-active::after {
@@ -42,29 +46,99 @@
 .mdh-sheet-cancel .action-sheet-button-inner {
 	color: var(--mdh-danger, #ef4444) !important;
 }
-/* Slightly smaller option text on the language sheet. */
+/* Premium text styles for the action sheets (Language, Gender etc.) */
 .mdh-lang-sheet .action-sheet-button .action-sheet-button-inner {
+	color: var(--mdh-primary, #26428b) !important;
 	font-size: 15px;
 }
+.mdh-lang-sheet .action-sheet-selected .action-sheet-button-inner {
+	font-weight: 700 !important;
+}
+.mdh-lang-sheet .action-sheet-cancel .action-sheet-button-inner {
+	color: var(--mdh-danger, #ef4444) !important;
+	font-weight: 700 !important;
+}
 
-/* ---- Toast (modern floating pill) ------------------------------------- */
+/* ---- Toast (modern card with left accent border) ---------------------- */
 .mdh-toast {
-	--border-radius: 14px;
-	--box-shadow: 0 10px 30px rgba(16, 24, 40, 0.18);
-	--min-height: 52px;
-	font-weight: 600;
+	--background: #ffffff;
+	--border-radius: 12px;
+	--box-shadow:
+		0 10px 15px -3px rgba(16, 24, 40, 0.08),
+		0 4px 6px -4px rgba(16, 24, 40, 0.08);
+	--min-height: 64px;
+	--color: #334155;
+	--start: 16px;
+	--end: 16px;
 	text-align: left;
 }
 .mdh-toast::part(container) {
-	padding: 4px 6px;
+	padding: 12px 14px 12px 16px;
+	width: 100%;
+	max-width: 100%;
+	margin-inline: auto;
+	box-sizing: border-box;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin: 0;
+}
+.mdh-toast::part(container)::before {
+	content: "";
+	display: block;
+	width: 3px;
+	align-self: stretch;
+	background: var(--toast-color, #64748b);
+	border-radius: 999px;
+	margin-inline-end: 12px;
+	flex-shrink: 0;
+}
+.mdh-toast::part(content) {
+	flex: 1;
+	padding: 0;
+	margin: 0;
+}
+.mdh-toast::part(header) {
+	font-size: 13.5px;
+	line-height: 1.4;
+	font-weight: 700;
+	color: var(--toast-color, #0f172a);
+	margin-bottom: 2px;
 }
 .mdh-toast::part(message) {
-	font-size: 13px;
-	line-height: 1.35;
+	font-size: 12px;
+	line-height: 1.4;
+	font-weight: 500;
+	color: #64748b;
 }
-.mdh-toast::part(icon) {
-	font-size: 20px;
-	margin-inline-end: 4px;
+.mdh-toast::part(button) {
+	color: #0f172a !important;
+	margin-inline-start: 0;
+	padding: 0;
+	height: auto;
+	min-height: auto;
+	background: transparent !important;
+	opacity: 0.8 !important;
+	transition: opacity 0.15s ease;
+	width: auto;
+	font-size: 12px;
+}
+.mdh-toast::part(button):hover {
+	opacity: 1 !important;
+}
+
+/* Accent colors for each kind */
+.mdh-toast--success {
+	--toast-color: #72b043;
+}
+.mdh-toast--error {
+	--toast-color: #eb5757;
+}
+.mdh-toast--warning {
+	--toast-color: #f2c94c;
+}
+.mdh-toast--info {
+	--toast-color: #2f80ed;
 }
 
 /* ---- Filter FAB (48×36 rounded rect, per Figma) ------------------------ */
@@ -87,11 +161,18 @@
 .mdh-tab-bar ion-tab-button {
 	--color: var(--mdh-ink);
 	--color-selected: var(--mdh-primary);
+	/* Every tab gets an equal share of the bar, regardless of label length. */
+	flex: 1 1 0;
+	min-width: 0;
+	max-width: none;
 }
 .mdh-tab-bar ion-tab-button ion-label {
-	font-size: 10px;
+	font-size: 9px;
 	font-weight: 600;
 	margin-top: 2px;
+	max-width: 100%;
+	white-space: nowrap;
+	overflow: visible;
 }
 .mdh-tab-bar ion-tab-button ion-icon {
 	font-size: 22px;
@@ -133,4 +214,56 @@
 	100% {
 		background-position: 0 50%;
 	}
+}
+
+/* ---- Select (matches TextField design) -------------------------------- */
+.mdh-select {
+	--padding-start: 0px;
+	--padding-end: 0px;
+	--padding-top: 0px;
+	--padding-bottom: 0px;
+	--highlight-height: 0px;
+	background: #ffffff;
+	border: 1px solid #dae3ef;
+	border-radius: 9px;
+	padding: 0 14px;
+	height: 38px;
+	box-sizing: border-box;
+	font-family: inherit;
+	font-size: 12px;
+	color: var(--mdh-ink, #000000);
+	transition: border-color 0.15s ease-in-out;
+	cursor: pointer;
+	position: relative;
+}
+.mdh-select:active,
+.mdh-select.select-focused {
+	border-color: var(--mdh-primary, #26428b);
+}
+.mdh-select::part(container) {
+	width: 100% !important;
+	display: flex !important;
+	justify-content: space-between !important;
+	align-items: center !important;
+}
+.mdh-select::part(icon) {
+	position: absolute !important;
+	right: 0px !important;
+	color: #667085;
+	opacity: 1;
+	font-size: 6px;
+	pointer-events: none;
+	width: 15px;
+}
+.mdh-select::part(text) {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--mdh-ink, #000000);
+	padding-inline-end: 20px;
+}
+.mdh-select::part(placeholder) {
+	font-size: 12px;
+	font-weight: 500;
+	color: #c4c7cc;
+	padding-inline-end: 20px;
 }

@@ -1,9 +1,5 @@
 import { toastController } from "@ionic/core";
-import {
-	alertCircle as alertCircleIcon,
-	checkmarkCircle as checkmarkCircleIcon,
-	informationCircle as informationCircleIcon,
-} from "ionicons/icons";
+import { close as closeIcon } from "ionicons/icons";
 
 /**
  * The single place that shows a toast in the app. Imperative (works OUTSIDE
@@ -15,7 +11,7 @@ import {
  * central toast and capExpert's shared toast service).
  */
 
-type ToastKind = "success" | "error" | "info";
+type ToastKind = "success" | "error" | "info" | "warning";
 
 /** Dedupe window: swallow an identical message fired again within this many ms. */
 const DEDUPE_MS = 700;
@@ -35,7 +31,7 @@ function now(): number {
 
 /**
  * Shows a single Ionic toast. Success is brief and green; errors linger and are
- * red; info is a neutral bar. Identical back-to-back messages (e.g. two mounted
+ * red; info/warnings are yellow. Identical back-to-back messages (e.g. two mounted
  * components, or a refresh-retry) within {@link DEDUPE_MS} collapse into one.
  */
 export async function presentToast(
@@ -49,23 +45,25 @@ export async function presentToast(
 	if (last && last.message === trimmed && at - last.at < DEDUPE_MS) return;
 	last = { message: trimmed, at };
 
+	let headerText = "Info";
+	if (kind === "success") headerText = "Success";
+	else if (kind === "error") headerText = "Error";
+	else if (kind === "warning") headerText = "Warning";
+
 	try {
 		const toast = await toastController.create({
+			header: headerText,
 			message: trimmed,
-			duration: kind === "success" ? 1800 : kind === "error" ? 2600 : 2000,
+			duration: kind === "success" ? 2500 : kind === "error" ? 3500 : 3000,
 			position: "top",
+			// Colors + layout come from `.mdh-toast*` CSS.
 			cssClass: `mdh-toast mdh-toast--${kind}`,
-			icon:
-				kind === "success"
-					? checkmarkCircleIcon
-					: kind === "error"
-						? alertCircleIcon
-						: informationCircleIcon,
-			...(kind === "success"
-				? { color: "success" }
-				: kind === "error"
-					? { color: "danger" }
-					: { color: "dark" }),
+			buttons: [
+				{
+					icon: closeIcon,
+					role: "cancel",
+				},
+			],
 		});
 		await toast.present();
 	} catch {
@@ -86,4 +84,9 @@ export function toastError(message: string): void {
 /** Show a neutral info toast (capability notices, "coming soon", hints). */
 export function toastInfo(message: string): void {
 	void presentToast(message, "info");
+}
+
+/** Show a warning (yellow) toast. */
+export function toastWarning(message: string): void {
+	void presentToast(message, "warning");
 }

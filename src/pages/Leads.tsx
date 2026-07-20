@@ -365,7 +365,7 @@ export default function Leads() {
 						<IonIcon icon={ICONS.filters} className="text-white" />
 					</IonFabButton>
 					{activeFilterCount > 0 ? (
-						<span className="pointer-events-none absolute right-0 top-0 z-10 grid h-6 min-w-6 -translate-y-1 translate-x-1 place-items-center rounded-full border-2 border-white bg-danger px-1 text-xs font-bold text-white">
+						<span className="pointer-events-none absolute right-0 -top-2.5 z-10 grid h-6 min-w-6 -translate-y-1 translate-x-1 place-items-center rounded-full border-2 border-white bg-danger px-1 text-xs font-bold text-white">
 							{activeFilterCount}
 						</span>
 					) : null}
