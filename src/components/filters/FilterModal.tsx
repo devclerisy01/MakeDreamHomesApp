@@ -213,7 +213,7 @@ function FilterRow({
 				className={`shrink-0 text-lg ${selected ? "text-primary" : "text-line"}`}
 			/>
 			<span
-				className={`min-w-0 flex-1 truncate text-[15px] ${
+				className={`min-w-0 flex-1 truncate text-xs ${
 					selected ? "font-semibold text-ink" : "text-muted"
 				}`}
 			>

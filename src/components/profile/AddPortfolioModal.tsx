@@ -342,7 +342,7 @@ export function AddPortfolioModal({
 												type="button"
 												onClick={() => setCoverId(photo.id)}
 												aria-label={isCover ? "Cover photo" : "Set as cover"}
-												className={`block h-full w-full overflow-hidden rounded-lg border-2 ${
+												className={`relative block h-full w-full overflow-hidden rounded-xl border-2 ${
 													isCover ? "border-primary" : "border-line"
 												}`}
 											>

@@ -1,7 +1,6 @@
 import {
 	IonHeader,
 	IonIcon,
-	IonMenuToggle,
 	IonToolbar,
 	useIonActionSheet,
 	useIonRouter,
@@ -28,7 +27,7 @@ interface AppHeaderProps {
 	title?: string;
 	/** Render the brand wordmark instead of a title (Home). */
 	showLogo?: boolean;
-	/** Show a back chevron (for pushed sub-pages) instead of the menu button. */
+	/** Show a back chevron (for pushed sub-pages). */
 	back?: boolean;
 	/** Blend the toolbar into the Home page's light-blue gradient backdrop. */
 	tinted?: boolean;
@@ -37,9 +36,8 @@ interface AppHeaderProps {
 }
 
 /**
- * Shared top bar: a leading back / "three bars" button (the menu button opens
- * the side drawer — see {@link ./SideMenu}), title/logo, the location city
- * picker and a static language indicator.
+ * Shared top bar: an optional leading back button (pushed sub-pages), the
+ * title/logo, the location city picker and the language selector.
  */
 export function AppHeader({
 	title,
@@ -92,10 +90,10 @@ export function AppHeader({
 	return (
 		<IonHeader className={`mdh-header${tinted ? " mdh-header--tint" : ""}`}>
 			<IonToolbar>
-				<div className="flex items-center gap-2 px-2.5 py-1">
+				<div className="flex items-center gap-2 px-5 py-1">
 					{back ? (
 						<button
-							className="cursor-pointer border-none bg-transparent p-1.5 leading-none text-ink"
+							className="cursor-pointer border-none bg-transparent p-1.5 leading-none text-ink -ml-3 -mr-1 relative top-[1px]"
 							type="button"
 							aria-label="Back"
 							onClick={() =>
@@ -106,18 +104,7 @@ export function AppHeader({
 						>
 							<IonIcon icon={ICONS.back} className="text-2xl" />
 						</button>
-					) : (
-						// Opens the side drawer (SideMenu) with the account action.
-						<IonMenuToggle menu="app-menu" autoHide={false}>
-							<button
-								className="cursor-pointer border-none bg-transparent p-1.5 leading-none text-ink"
-								type="button"
-								aria-label="Menu"
-							>
-								<IonIcon icon={ICONS.menu} className="text-[20px]" />
-							</button>
-						</IonMenuToggle>
-					)}
+					) : null}
 
 					<div className="min-w-0 flex-1">
 						{showLogo ? (
@@ -133,36 +120,40 @@ export function AppHeader({
 						)}
 					</div>
 
-					<div className="flex items-center gap-1.5">
+					<div className="flex items-center gap-2">
 						{showLocation ? (
 							<button
 								type="button"
 								onClick={() => setPickerOpen(true)}
 								aria-label="Change location"
-								className="inline-flex max-w-[120px] items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2 py-1 text-[11px] font-medium text-ink"
+								className="group inline-flex max-w-[130px] items-center gap-1.5 whitespace-nowrap rounded-full bg-white py-1.5 pl-1.5 pr-2.5 text-[11.5px] font-semibold text-ink shadow-[0_2px_8px_rgba(16,24,40,0.08)] ring-1 ring-black/[0.04] transition active:scale-[0.97]"
 							>
-								<IonIcon
-									icon={ICONS.location}
-									className="shrink-0 text-[13px] text-muted-light"
-								/>
+								<span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary-light text-primary">
+									<IonIcon icon={ICONS.location} className="text-[12px]" />
+								</span>
 								<span className="min-w-0 flex-1 truncate">
 									{location?.city ?? "Select city"}
 								</span>
-								<IonIcon icon={ICONS.chevronDown} className="text-[10px]" />
+								<IonIcon
+									icon={ICONS.chevronDown}
+									className="shrink-0 text-[9px] text-muted-light"
+								/>
 							</button>
 						) : null}
 						<button
 							type="button"
 							onClick={openLanguageSheet}
 							aria-label="Change language"
-							className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line bg-white px-2 py-1 text-[11px] font-medium text-ink"
+							className="group inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white py-1.5 pl-1.5 pr-2.5 text-[11.5px] font-semibold text-ink shadow-[0_2px_8px_rgba(16,24,40,0.08)] ring-1 ring-black/[0.04] transition active:scale-[0.97]"
 						>
-							<IonIcon
-								icon={ICONS.language}
-								className="text-[13px] text-muted-light"
-							/>
+							<span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary-light text-primary">
+								<IonIcon icon={ICONS.language} className="text-[12px]" />
+							</span>
 							{activeLang}
-							<IonIcon icon={ICONS.chevronDown} className="text-[10px]" />
+							<IonIcon
+								icon={ICONS.chevronDown}
+								className="shrink-0 text-[9px] text-muted-light"
+							/>
 						</button>
 					</div>
 				</div>

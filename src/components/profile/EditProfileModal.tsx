@@ -1,4 +1,4 @@
-import { IonIcon, IonModal, IonSpinner } from "@ionic/react";
+import { IonIcon, IonModal, IonSpinner, IonSelect, IonSelectOption } from "@ionic/react";
 import { cameraOutline } from "ionicons/icons";
 import { type ChangeEvent, useEffect, useState } from "react";
 
@@ -301,17 +301,24 @@ export function EditProfileModal({
 
 						<div>
 							<span className={LABEL}>Gender</span>
-							<select
+							<IonSelect
 								value={gender}
-								onChange={(event) => setGender(event.target.value)}
-								className="w-full rounded-xl border border-line bg-white px-3.5 py-3 font-sans text-base text-ink outline-none focus:border-primary"
+								mode="ios"
+								interface="action-sheet"
+								interfaceOptions={{
+									header: "Gender",
+									cssClass: "mdh-lang-sheet",
+									mode: "ios",
+								}}
+								onIonChange={(event) => setGender(event.detail.value)}
+								className="mdh-select w-full"
 							>
 								{GENDERS.map((option) => (
-									<option key={option.value} value={option.value}>
+									<IonSelectOption key={option.value} value={option.value}>
 										{option.label}
-									</option>
+									</IonSelectOption>
 								))}
-							</select>
+							</IonSelect>
 						</div>
 
 						{isBusiness ? (
