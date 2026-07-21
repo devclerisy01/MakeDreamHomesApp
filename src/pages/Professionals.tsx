@@ -46,12 +46,12 @@ import { LIST_GRID } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
 import type { DirectoryCategoryId } from "@/types";
 
-// Matches the web sort dropdown: Latest + Top Rated, plus Nearest only when a
-// location is active. (Web does not expose "Most Experienced".)
-const SORT_OPTIONS_BASE = [
-	{ value: "latest", label: "Latest" },
-	{ value: "topRated", label: "Top Rated" },
-];
+// Matches the web sort dropdown: Latest always; Nearest only when a location is
+// active; Top Rated only on the professionals track. (Web does not expose "Most
+// Experienced".)
+const SORT_LATEST = { value: "latest", label: "Latest" };
+const SORT_NEAREST = { value: "nearest", label: "Nearest" };
+const SORT_TOP_RATED = { value: "topRated", label: "Top Rated" };
 
 const RATINGS_GROUP: FilterGroup = {
 	key: "flags",
@@ -108,9 +108,19 @@ export default function Professionals() {
 	const [categories, setCategories] = useState<CategoryOption[]>([]);
 	const [locations, setLocations] = useState<LocationFacet[]>([]);
 
-	// The type facet is per-track, so clear selections when the track changes.
+	// Track switch preserves a still-valid sort (matches web, which carries
+	// `search` + `sort` forward); the per-track type facet, rating flags and
+	// locality tokens are all cleared. "Top Rated" is dropped when leaving the
+	// professionals track since it isn't offered elsewhere.
 	useEffect(() => {
-		setSelection({});
+		setSelection((prev) => {
+			const sort = prev.sort?.[0];
+			const keepSort =
+				sort && (sort !== "topRated" || category === "professionals");
+			const next: FilterSelection = {};
+			if (keepSort) next.sort = prev.sort;
+			return next;
+		});
 	}, [category]);
 
 	const typeId = selection.type?.[0];
@@ -162,9 +172,11 @@ export default function Professionals() {
 			label: "Sort by",
 			header: "Sort by",
 			multi: false,
-			options: location
-				? [{ value: "nearest", label: "Nearest" }, ...SORT_OPTIONS_BASE]
-				: SORT_OPTIONS_BASE,
+			options: [
+				SORT_LATEST,
+				...(location ? [SORT_NEAREST] : []),
+				...(category === "professionals" ? [SORT_TOP_RATED] : []),
+			],
 		};
 		const list: FilterGroup[] = [sortGroup];
 		const typeLabel = TYPE_LABEL[category];

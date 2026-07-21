@@ -16,7 +16,10 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
+import { ReviewsList } from "@/components/cards/ReviewsList";
+import { ConversationList } from "@/components/chat/ConversationList";
 import { Avatar } from "@/components/common/Avatar";
+import { Lightbox, type LightboxImage } from "@/components/common/Lightbox";
 import { ReadMoreText } from "@/components/common/ReadMoreText";
 import {
 	PortfolioGridSkeleton,
@@ -29,9 +32,14 @@ import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { MyLeadCard } from "@/components/profile/MyLeadCard";
 import { PortfolioTile } from "@/components/profile/PortfolioTile";
 import { SavedList } from "@/components/profile/SavedList";
-import { encodeProfessionalId, ROUTES } from "@/constants/routes";
 import { UI_MESSAGES } from "@/constants/messages";
+import {
+	encodeProfessionalId,
+	publicProfileUrl,
+	ROUTES,
+} from "@/constants/routes";
 import { me } from "@/lib/api/auth";
+import { getUnreadTotal } from "@/lib/api/chat";
 import { getMyLeads } from "@/lib/api/leads";
 import {
 	deletePortfolio,
@@ -41,12 +49,14 @@ import {
 import { getProfessionalDetail } from "@/lib/api/professionals";
 import { toastInfo } from "@/lib/api/toast";
 import { useLogin } from "@/lib/auth/login-gate";
-import { setStoredUser, useAuth } from "@/lib/auth/session";
+import { clearSession, setStoredUser, useAuth } from "@/lib/auth/session";
+import { getImageSrc } from "@/lib/format";
+import { shareLink } from "@/lib/share";
 import { SECTION_HEAD, SECTION_TITLE, TAG } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
 import type { Lead, ProfessionalDetail } from "@/types";
 
-type Tab = "overview" | "savedPros" | "savedLeads";
+type Tab = "messages" | "overview" | "savedPros" | "savedLeads";
 
 /** Neutral profession chip on the identity card (Figma: grey fill, hairline border). */
 const PRO_TAG = `${TAG} border-line bg-[#F2F4F7] font-semibold text-ink`;
@@ -58,6 +68,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 	{ id: "overview", label: "Overview", icon: ICONS.tabOverview },
 	{ id: "savedPros", label: "Saved Professionals", icon: ICONS.tabSaved },
 	{ id: "savedLeads", label: "Saved Leads", icon: ICONS.tabSaved },
+	{ id: "messages", label: "Messages", icon: ICONS.message },
 ];
 
 const filled = (value: string | null | undefined) => Boolean(value?.trim?.());
@@ -117,6 +128,13 @@ export default function Profile() {
 	const [addPortfolioOpen, setAddPortfolioOpen] = useState(false);
 	// The portfolio entry being edited (null = the sheet is in "add" mode).
 	const [editEntry, setEditEntry] = useState<PortfolioEntry | null>(null);
+	// Total unread chat messages (drives the Messages row badge).
+	const [unread, setUnread] = useState(0);
+	// Fullscreen image viewer, shared by the avatar and the portfolio grid.
+	const [lightbox, setLightbox] = useState<{
+		images: LightboxImage[];
+		index: number;
+	} | null>(null);
 
 	/** Confirm, then soft-delete a portfolio entry (removed from the list). */
 	function confirmDeletePortfolio(id: string) {
@@ -137,6 +155,25 @@ export default function Profile() {
 								),
 							)
 							.catch(() => {});
+					},
+				},
+			],
+		});
+	}
+
+	/** Confirm, then sign out — clears the session and returns Home. */
+	function confirmLogout() {
+		void presentAlert({
+			header: "Log out?",
+			message: "You'll need to sign in again to post or save.",
+			buttons: [
+				{ text: "Cancel", role: "cancel" },
+				{
+					text: "Log out",
+					role: "destructive",
+					handler: () => {
+						clearSession();
+						router.push(ROUTES.home, "root", "replace");
 					},
 				},
 			],
@@ -184,6 +221,23 @@ export default function Profile() {
 		return () => controller.abort();
 	}, [isAuthed, load, reloadKey]);
 
+	// Keep the Messages unread badge current while the profile is open.
+	useEffect(() => {
+		if (!isAuthed) {
+			setUnread(0);
+			return;
+		}
+		const refresh = () => {
+			if (!document.hidden)
+				getUnreadTotal()
+					.then(setUnread)
+					.catch(() => {});
+		};
+		refresh();
+		const timer = setInterval(refresh, 15_000);
+		return () => clearInterval(timer);
+	}, [isAuthed, reloadKey]);
+
 	if (!isAuthed || !user) {
 		return (
 			<IonPage>
@@ -226,6 +280,26 @@ export default function Profile() {
 	const owner = fullName;
 	const showOwner = Boolean(owner) && owner !== business;
 	const profession = detail?.profession?.trim() ?? "";
+	// Only business users (professional/supplier/dealer) have a public web
+	// profile page — persons don't, so the share affordance is hidden for them.
+	const canShare = ["professional", "supplier", "dealer"].includes(
+		user.userType ?? "",
+	);
+
+	/** Share this profile's public WEB link via the native share sheet. */
+	function shareProfile() {
+		void shareLink(
+			publicProfileUrl({
+				id: String(user?.id),
+				userType: user?.userType,
+				category: detail?.category,
+				profession,
+				name: title,
+			}),
+			title,
+		);
+	}
+
 	const location = [user.locality, user.city].filter(Boolean).join(", ");
 	const about =
 		user.about?.trim() || (detail?.about?.join("\n\n").trim() ?? "");
@@ -241,6 +315,12 @@ export default function Profile() {
 			pending: entry.status === "PENDING",
 		})) ??
 		(detail?.portfolio ?? []).map((item) => ({ ...item, pending: false }));
+	// Portfolio slides for the fullscreen lightbox (P14).
+	const portfolioImages: LightboxImage[] = portfolio.map((item) => ({
+		src: getImageSrc(item),
+		title: item.title ?? undefined,
+		subtitle: item.city || undefined,
+	}));
 	const leads = myLeads ?? [];
 	const hasReviews = Boolean(detail?.reviewsBreakdown && detail.reviewsCount);
 
@@ -317,12 +397,21 @@ export default function Profile() {
 										>
 											<IonIcon icon={item.icon} className="text-base" />
 											{item.label}
+											{item.id === "messages" && unread > 0 ? (
+												<span className="grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white">
+													{unread > 99 ? "99+" : unread}
+												</span>
+											) : null}
 										</button>
 									);
 								})}
 							</div>
 
-							{tab === "savedPros" ? (
+							{tab === "messages" ? (
+								<div className="-mx-4 bg-white px-4">
+									<ConversationList reloadKey={reloadKey} />
+								</div>
+							) : tab === "savedPros" ? (
 								// Distinct keys force a fresh mount per entity — otherwise the
 								// reused instance briefly renders the previous tab's items with the
 								// wrong card (e.g. a Lead as a ProfessionalCard) and crashes.
@@ -334,12 +423,26 @@ export default function Profile() {
 									{/* ---- Identity ---- */}
 									<section>
 										<div className="flex gap-3.5">
-											<Avatar
-												name={title}
-												image={photo}
-												size={118}
+											<button
+												type="button"
+												disabled={!photo}
+												onClick={() =>
+													photo &&
+													setLightbox({
+														images: [{ src: getImageSrc(photo), title }],
+														index: 0,
+													})
+												}
 												className="self-start rounded-2xl"
-											/>
+												aria-label="View profile photo"
+											>
+												<Avatar
+													name={title}
+													image={photo}
+													size={118}
+													className="rounded-2xl"
+												/>
+											</button>
 											<div className="min-w-0 flex-1">
 												<div className="flex items-start justify-between gap-2">
 													{profession ? (
@@ -348,17 +451,19 @@ export default function Profile() {
 														<span />
 													)}
 													<div className="flex shrink-0 gap-1.5">
-														<button
-															type="button"
-															aria-label="Share profile"
-															className={iconBtn}
-															onClick={() => comingSoon("Sharing")}
-														>
-															<IonIcon
-																icon={ICONS.share}
-																className="text-[11px]"
-															/>
-														</button>
+														{canShare ? (
+															<button
+																type="button"
+																aria-label="Share profile"
+																className={iconBtn}
+																onClick={shareProfile}
+															>
+																<IonIcon
+																	icon={ICONS.share}
+																	className="text-[11px]"
+																/>
+															</button>
+														) : null}
 														<button
 															type="button"
 															aria-label="Edit profile"
@@ -474,11 +579,14 @@ export default function Profile() {
 											/>
 										) : portfolio.length ? (
 											<div className="grid grid-cols-2 gap-3.5">
-												{portfolio.map((item) => (
+												{portfolio.map((item, i) => (
 													<PortfolioTile
 														key={item.id}
 														item={item}
 														pending={item.pending}
+														onOpen={() =>
+															setLightbox({ images: portfolioImages, index: i })
+														}
 														onEdit={
 															myPortfolio
 																? () => {
@@ -538,12 +646,33 @@ export default function Profile() {
 									</section>
 
 									{/* ---- Rating & Reviews ---- */}
-									{hasReviews && detail?.reviewsBreakdown ? (
-										<RatingBreakdown
-											breakdown={detail.reviewsBreakdown}
-											count={detail.reviewsCount}
-										/>
+									{hasReviews && detail ? (
+										<div className="flex flex-col gap-4">
+											{detail.reviewsBreakdown ? (
+												<RatingBreakdown
+													breakdown={detail.reviewsBreakdown}
+													count={detail.reviewsCount}
+												/>
+											) : null}
+											<ReviewsList
+												userId={detail.id}
+												initialReviews={detail.reviews ?? []}
+												total={detail.reviewsCount ?? 0}
+											/>
+										</div>
 									) : null}
+
+									{/* ---- Account ---- */}
+									<section className="pb-2">
+										<button
+											type="button"
+											onClick={confirmLogout}
+											className="flex w-full items-center justify-center gap-2 rounded-[10px] border border-line bg-white py-3 text-[13px] font-bold text-danger active:bg-surface-muted"
+										>
+											<IonIcon icon={ICONS.logout} className="text-[16px]" />
+											Log out
+										</button>
+									</section>
 								</div>
 							)}
 						</Container>
@@ -575,6 +704,17 @@ export default function Profile() {
 						setTab("overview");
 					}}
 				/>
+
+				{lightbox ? (
+					<Lightbox
+						images={lightbox.images}
+						index={lightbox.index}
+						onIndexChange={(i) =>
+							setLightbox((lb) => (lb ? { ...lb, index: i } : lb))
+						}
+						onClose={() => setLightbox(null)}
+					/>
+				) : null}
 			</IonContent>
 		</IonPage>
 	);

@@ -216,6 +216,11 @@ export function getLeads(
 	return fetchLeadsPage("/app/leads", query, false, signal);
 }
 
+/** A single lead by id (`GET /app/leads/:id`) — backs the chat lead-context "More". */
+export function getLeadById(id: string, signal?: AbortSignal): Promise<Lead> {
+	return apiGet<Lead>(`/app/leads/${id}`, { auth: true, signal });
+}
+
 /** One page of the signed-in user's shortlisted leads (auth). */
 export function fetchShortlistedLeads(
 	query: LeadsQuery = {},
@@ -244,6 +249,15 @@ export function leadIntentChip(category: string): string | null {
 	if (c.startsWith("hire")) return "Hiring";
 	if (c.startsWith("available")) return "Available";
 	return null;
+}
+
+/** Human-readable label for a raw `LeadStatus` enum value (owner view pill). */
+export function leadStatusLabel(status: string): string {
+	return status
+		.toLowerCase()
+		.split("_")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(" ");
 }
 
 /** Base track derived from the raw category. */

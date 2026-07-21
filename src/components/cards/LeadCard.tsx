@@ -2,7 +2,9 @@ import { IonIcon } from "@ionic/react";
 import { useState } from "react";
 
 import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
+import { Lightbox } from "@/components/common/Lightbox";
 import { SaveButton } from "@/components/common/SaveButton";
+import { assetUrl } from "@/lib/asset";
 import { leadBaseCategory, leadIntentChip } from "@/lib/api/leads";
 import { formatBudget, timeAgo } from "@/lib/format";
 import { CARD } from "@/lib/ui";
@@ -39,10 +41,20 @@ export function LeadCard({
 	// the short summary when no description is present.
 	const title = lead.description?.trim() || lead.summary?.trim() || "";
 	const budget = formatBudget(lead.budget);
-	const tags = (lead.tags ?? []).slice(0, 3);
+	const allTags = lead.tags ?? [];
+	const tags = allTags.slice(0, 5);
+	const extraTags = allTags.length - tags.length;
 	const posted = timeAgo(lead.createdAt);
+	// Prefer the full set of preferred localities; fall back to the flat location.
+	const localityLabel = lead.localities?.length
+		? lead.localities.join(" | ")
+		: lead.location;
+	const images = (lead.images ?? [])
+		.map((src) => assetUrl(src))
+		.filter((src): src is string => Boolean(src));
 
 	const [detailsOpen, setDetailsOpen] = useState(false);
+	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
 	return (
 		<>
@@ -87,6 +99,11 @@ export function LeadCard({
 									{tag}
 								</span>
 							))}
+							{extraTags > 0 ? (
+								<span className="inline-flex items-center whitespace-nowrap rounded-[4px] border border-[#d7dded] bg-white px-[7px] py-1 text-[8px] font-bold leading-none text-[#6f7791]">
+									+{extraTags}
+								</span>
+							) : null}
 							{posted ? (
 								<span className="ml-auto whitespace-nowrap text-[10px] text-[#868686]">
 									{posted}
@@ -95,13 +112,46 @@ export function LeadCard({
 						</div>
 					</div>
 				</div>
+				{/* Requirement image thumbnails → open the lightbox (tap doesn't
+					    bubble to the card's details-modal open). */}
+				{images.length > 0 ? (
+					<div
+						className="mt-2.5 flex gap-1.5"
+						onClick={(event) => event.stopPropagation()}
+					>
+						{images.slice(0, 4).map((src, i) => (
+							<button
+								key={i}
+								type="button"
+								onClick={() => setLightboxIndex(i)}
+								className="h-11 w-11 overflow-hidden rounded-md border border-line"
+							>
+								<img
+									src={src}
+									alt=""
+									loading="lazy"
+									className="h-full w-full object-cover"
+								/>
+							</button>
+						))}
+						{images.length > 4 ? (
+							<button
+								type="button"
+								onClick={() => setLightboxIndex(4)}
+								className="grid h-11 w-11 place-items-center rounded-md border border-line bg-surface-muted text-[11px] font-bold text-muted"
+							>
+								+{images.length - 4}
+							</button>
+						) : null}
+					</div>
+				) : null}
 
 				<div className="mt-2.5 flex items-center justify-between gap-2.5 border-t border-line pt-2.5">
 					{/* Figma: Regular 10px, #6F7791 */}
-					{lead.location ? (
+					{localityLabel ? (
 						<span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-black">
 							<IonIcon icon={ICONS.location} className="shrink-0 text-[12px]" />
-							<span className="truncate">{lead.location}</span>
+							<span className="truncate">{localityLabel}</span>
 						</span>
 					) : (
 						<span />
@@ -113,7 +163,7 @@ export function LeadCard({
 								icon={ICONS.budget}
 								className="text-[12px] text-muted-light"
 							/>
-							Est. Price: <span className="font-bold">{budget}</span>
+							Budget: <span className="font-bold">{budget}</span>
 						</span>
 					) : null}
 				</div>
@@ -125,6 +175,15 @@ export function LeadCard({
 				onClose={() => setDetailsOpen(false)}
 				owned={owned}
 			/>
+
+			{lightboxIndex !== null ? (
+				<Lightbox
+					images={images.map((src) => ({ src }))}
+					index={lightboxIndex}
+					onIndexChange={setLightboxIndex}
+					onClose={() => setLightboxIndex(null)}
+				/>
+			) : null}
 		</>
 	);
 }

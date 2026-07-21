@@ -103,8 +103,12 @@ export interface Lead {
 	/** Raw category, e.g. `professional`, `buy_property`, `sell_material`. */
 	category: string;
 	location: string;
+	/** All preferred localities for the lead; falls back to `location` when empty. */
+	localities?: string[];
 	description: string;
 	postedBy: string;
+	/** Poster's user id (for "Send Message"); null for leads not tied to a user. */
+	userId?: string | null;
 	createdAt: string;
 	tags: string[];
 	summary?: string;

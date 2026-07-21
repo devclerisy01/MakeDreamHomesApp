@@ -11,7 +11,14 @@ import {
 import { getImageSrc } from "@/lib/format";
 import { CARD, TAG_MUTED } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
-import type { ProfessionalListing } from "@/types";
+import type { ProfessionalListing, ShowcaseKind } from "@/types";
+
+/** Label above the thumbnail strip, by showcase kind (mirrors the web card). */
+const SHOWCASE_LABEL: Record<ShowcaseKind, string> = {
+	portfolio: "Projects",
+	properties: "Properties",
+	products: "Products",
+};
 
 export function ProfessionalCard({
 	pro,
@@ -26,6 +33,13 @@ export function ProfessionalCard({
 	const router = useIonRouter();
 	const thumbs = pro.showcase?.items?.slice(0, 2) ?? [];
 	const leads = pro.leadCount ?? 0;
+	// Per-track label above the thumbnail strip (web: Portfolio / Properties /
+	// Products); "+N" covers any items beyond the two shown.
+	const showcaseLabel = SHOWCASE_LABEL[pro.showcase?.kind ?? "portfolio"];
+	const extraThumbs = Math.max(
+		0,
+		(pro.showcase?.count ?? thumbs.length) - thumbs.length,
+	);
 
 	// Deep-link to this pro's leads without triggering the card's detail link.
 	function openLeads(event: MouseEvent) {
@@ -46,7 +60,7 @@ export function ProfessionalCard({
 				</div>
 				<div className="flex min-w-0 flex-1 flex-col gap-[4px]">
 					<div className="flex items-start justify-between gap-2">
-						{pro.profession ? (
+						{pro.category === "professionals" && pro.profession ? (
 							<span className={TAG_MUTED}>{pro.profession}</span>
 						) : (
 							<span />
@@ -106,18 +120,23 @@ export function ProfessionalCard({
 						{thumbs.length > 0 ? (
 							<div className="shrink-0 text-right relative">
 								<span className="mb-1 block text-[10px] font-semibold text-ink absolute bottom-full left-0">
-									Projects
+									{showcaseLabel}
 								</span>
 								<div className="flex gap-1">
 									{thumbs.map((thumb) => (
 										<img
 											key={thumb.id}
 											src={getImageSrc(thumb)}
-											alt={thumb.title ?? "Project image"}
+											alt={thumb.title ?? `${showcaseLabel} image`}
 											loading="lazy"
 											className="h-7 w-8 rounded-[5px] bg-surface-muted object-cover"
 										/>
 									))}
+									{extraThumbs > 0 ? (
+										<span className="grid h-7 w-8 shrink-0 place-items-center rounded-[5px] bg-surface-muted text-[9px] font-semibold text-ink">
+											+{extraThumbs}
+										</span>
+									) : null}
 								</div>
 							</div>
 						) : null}

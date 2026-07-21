@@ -30,6 +30,8 @@ const DISMISSED_MESSAGE_URLS = [
 	"/app/auth/refresh",
 	"/app/uploads",
 	"/app/shortlists",
+	// Chat is high-frequency (polling + sends); the thread UI is the feedback.
+	"/app/chat",
 ];
 
 function isDismissed(path: string): boolean {

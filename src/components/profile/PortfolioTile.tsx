@@ -15,6 +15,7 @@ export function PortfolioTile({
 	pending = false,
 	onEdit,
 	onDelete,
+	onOpen,
 }: {
 	item: PortfolioItem;
 	/** Badge the tile when the entry is still awaiting moderation. */
@@ -23,11 +24,18 @@ export function PortfolioTile({
 	onEdit?: () => void;
 	/** Owner-only: delete this entry (with confirm). */
 	onDelete?: () => void;
+	/** Open this image in the fullscreen lightbox. */
+	onOpen?: () => void;
 }) {
 	const src = getImageSrc(item);
 	const place = item.city || item.location;
 	return (
-		<div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-surface-muted">
+		<div
+			className={`relative aspect-[4/3] overflow-hidden rounded-2xl bg-surface-muted ${
+				onOpen ? "cursor-pointer" : ""
+			}`}
+			onClick={onOpen}
+		>
 			{src ? (
 				<img
 					src={src}
@@ -47,7 +55,10 @@ export function PortfolioTile({
 						<button
 							type="button"
 							aria-label="Edit project"
-							onClick={onEdit}
+							onClick={(event) => {
+								event.stopPropagation();
+								onEdit();
+							}}
 							className="grid h-7 w-7 place-items-center rounded-full bg-black/55 text-white backdrop-blur active:bg-black/75"
 						>
 							<IonIcon icon={createOutline} className="text-[15px]" />
@@ -57,7 +68,10 @@ export function PortfolioTile({
 						<button
 							type="button"
 							aria-label="Delete project"
-							onClick={onDelete}
+							onClick={(event) => {
+								event.stopPropagation();
+								onDelete();
+							}}
 							className="grid h-7 w-7 place-items-center rounded-full bg-black/55 text-white backdrop-blur active:bg-black/75"
 						>
 							<IonIcon icon={trashOutline} className="text-[15px]" />

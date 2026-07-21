@@ -29,6 +29,7 @@ import {
 	alertCircleOutline,
 	arrowForward,
 	cameraOutline,
+	chatbubbleEllipsesOutline,
 	checkmark,
 	checkmarkOutline,
 	chevronBackOutline,
@@ -164,6 +165,9 @@ export const ICONS = {
 	checkOutline: checkmarkOutline,
 	filters: optionsOutline,
 	logout: logOutOutline,
+
+	// ── Messaging ───────────────────────────────────────────────────────
+	message: chatbubbleEllipsesOutline,
 
 	// ── Media / status ──────────────────────────────────────────────────
 	camera: cameraOutline,

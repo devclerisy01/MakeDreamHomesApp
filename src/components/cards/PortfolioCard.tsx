@@ -3,13 +3,14 @@ import { locationOutline } from "ionicons/icons";
 
 import { getImageSrc } from "@/lib/format";
 import { CARD, META } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
 import type { PortfolioItem } from "@/types";
 
 export function PortfolioCard({ item }: { item: PortfolioItem }) {
 	const src = getImageSrc(item);
 	return (
 		<div className={`overflow-hidden ${CARD}`}>
-			<div className="aspect-[16/10] bg-surface-muted">
+			<div className="grid aspect-[16/10] place-items-center bg-surface-muted">
 				{src ? (
 					<img
 						src={src}
@@ -17,7 +18,13 @@ export function PortfolioCard({ item }: { item: PortfolioItem }) {
 						loading="lazy"
 						className="h-full w-full object-cover"
 					/>
-				) : null}
+				) : (
+					<IonIcon
+						icon={ICONS.image}
+						className="text-[32px] text-muted-light/60"
+						aria-hidden
+					/>
+				)}
 			</div>
 			<div className="px-3 py-2.5">
 				{item.title ? (

@@ -6,7 +6,9 @@ import { useEffect } from "react";
 
 import { TabsShell } from "@/components/layout/TabsShell";
 import { SplashScreen } from "@/components/splash/SplashScreen";
+import { me } from "@/lib/api/auth";
 import { LoginGateProvider } from "@/lib/auth/login-gate";
+import { getAccessToken, setStoredUser } from "@/lib/auth/session";
 import { ensureLocationInitialized } from "@/lib/geo/location-store";
 import { useSplash } from "@/hooks/useSplash";
 
@@ -39,6 +41,18 @@ const App: React.FC = () => {
 	// else the default). Idempotent — no-op when a city is already stored.
 	useEffect(() => {
 		void ensureLocationInitialized();
+	}, []);
+
+	// Validate a persisted session on boot: refresh the cached user from `/me`.
+	// An expired/invalid session is cleared (and the user notified) centrally by
+	// the API client's refresh path; a network error leaves the session intact.
+	useEffect(() => {
+		if (!getAccessToken()) return;
+		me()
+			.then(setStoredUser)
+			.catch(() => {
+				/* handled centrally (401 → forced logout; network error → kept) */
+			});
 	}, []);
 
 	// The native splash is held open (launchAutoHide: false) until here, so the

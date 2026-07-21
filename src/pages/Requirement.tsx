@@ -12,6 +12,7 @@ import { OtpVerify } from "@/components/auth/OtpVerify";
 import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
 import { AddressAutocomplete } from "@/components/common/AddressAutocomplete";
 import { CategoryChips } from "@/components/common/CategoryChips";
+import { Lightbox } from "@/components/common/Lightbox";
 import { TextField } from "@/components/common/TextField";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
@@ -105,6 +106,15 @@ interface Attachment {
 	url: string;
 }
 
+/** Smooth-scroll the first invalid field into view (mirrors the web form). */
+function scrollToId(id: string) {
+	requestAnimationFrame(() => {
+		document
+			.getElementById(id)
+			?.scrollIntoView({ behavior: "smooth", block: "center" });
+	});
+}
+
 const CHIP =
 	"rounded-full border px-[9px] py-1 text-[11px] font-semibold transition-colors";
 const CHIP_ON = "border-primary bg-[#f5f7fb] text-primary";
@@ -140,6 +150,10 @@ export default function Requirement() {
 
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
 	const [fileError, setFileError] = useState<string | null>(null);
+	// Staged-attachment index open in the fullscreen preview (R13).
+	const [attachmentPreview, setAttachmentPreview] = useState<number | null>(
+		null,
+	);
 
 	const [description, setDescription] = useState("");
 	const [address, setAddress] = useState("");
@@ -173,6 +187,9 @@ export default function Requirement() {
 	const [resendAfter, setResendAfter] = useState(60);
 	const [otpError, setOtpError] = useState<string | null>(null);
 	const [verifying, setVerifying] = useState(false);
+	// Guests must consent to terms & privacy before an account is created.
+	const [acceptedTerms, setAcceptedTerms] = useState(false);
+	const [termsError, setTermsError] = useState<string | null>(null);
 
 	// Attachments apply only to "sell" property/material requirements.
 	const showAttachment = type !== "professional" && intent === "sell";
@@ -363,9 +380,13 @@ export default function Requirement() {
 				? "professional"
 				: "person";
 
-	/** Validate the shared requirement fields (category + description). */
-	function validateRequirement(): boolean {
-		let invalid = false;
+	/** Validate the shared requirement fields; returns the id of the first
+	 *  invalid field (for scroll-to-error) or null when everything is valid. */
+	function validateRequirement(): string | null {
+		let firstError: string | null = null;
+		const fail = (id: string) => {
+			if (!firstError) firstError = id;
+		};
 		if (type === "professional" || type === "material") {
 			if (selectedCategoryNames().length === 0) {
 				setCategoryError(
@@ -373,26 +394,26 @@ export default function Requirement() {
 						? "Select at least one professional (or add your own)."
 						: "Select at least one material category (or add your own).",
 				);
-				invalid = true;
+				fail("req-category");
 			}
 		} else if (!propertyGroup) {
 			setCategoryError("Select a property category.");
-			invalid = true;
+			fail("req-category");
 		} else if (propertyGroup === "residential" && !propertyType) {
 			setCategoryError("Select a property type.");
-			invalid = true;
+			fail("req-category");
 		}
 		if (description.trim().length < 20) {
 			setDescriptionError(
 				"Please describe your requirement in at least 20 characters.",
 			);
-			invalid = true;
+			fail("req-description");
 		}
 		if (!(addressMeta?.address || address).trim()) {
 			setAddressError("Please add your location.");
-			invalid = true;
+			fail("req-address");
 		}
-		return !invalid;
+		return firstError;
 	}
 
 	/** Upload attachments and create the lead — for a logged-in post, or right
@@ -447,7 +468,11 @@ export default function Requirement() {
 	}
 
 	async function submit() {
-		if (!validateRequirement()) return;
+		const requirementError = validateRequirement();
+		if (requirementError) {
+			scrollToId(requirementError);
+			return;
+		}
 
 		// Signed in → post straight away.
 		if (isAuthed) {
@@ -456,16 +481,26 @@ export default function Requirement() {
 		}
 
 		// Guest → validate their details, then start the inline OTP sign-up.
-		let invalid = false;
+		let firstError: string | null = null;
+		const fail = (id: string) => {
+			if (!firstError) firstError = id;
+		};
 		if (!firstName.trim()) {
 			setNameError("Please enter your first name.");
-			invalid = true;
+			fail("req-name");
 		}
 		if (phone.length !== PHONE_DIGITS) {
 			setPhoneError("Enter a valid 10-digit mobile number.");
-			invalid = true;
+			fail("req-phone");
 		}
-		if (invalid) return;
+		if (!acceptedTerms) {
+			setTermsError("Please accept the terms to continue.");
+			fail("req-terms");
+		}
+		if (firstError) {
+			scrollToId(firstError);
+			return;
+		}
 
 		setSubmitting(true);
 		try {
@@ -500,7 +535,7 @@ export default function Requirement() {
 				userType: signupUserType,
 				firstName: firstName.trim() || undefined,
 				lastName: lastName.trim() || undefined,
-				acceptedTerms: true,
+				acceptedTerms,
 				address: addressMeta?.address || address.trim() || undefined,
 				locality: addressMeta?.locality || undefined,
 				city: addressMeta?.city || undefined,
@@ -539,6 +574,22 @@ export default function Requirement() {
 			: intent === "sell"
 				? "Which materials do you sell?"
 				: "Which materials do you need?";
+
+	// The "Available for work" professional flow is a single-select fixed set —
+	// the "Other" free-text option is hidden there (mirrors the web).
+	const showOther = !(type === "professional" && proIntent === "available");
+	const hasCategorySelection =
+		(type === "material" ? materialCats : proCats).length > 0 ||
+		(otherActive && otherCategory.trim().length > 0);
+
+	/** Clear all selected categories + the "Other" buffer (professional/material). */
+	function clearCategories() {
+		if (type === "material") setMaterialCats([]);
+		else setProCats([]);
+		setOtherActive(false);
+		setOtherCategory("");
+		setCategoryError(null);
+	}
 
 	const intentToggle = (
 		<div className="mb-4 inline-flex rounded-full border border-line bg-white p-0.5">
@@ -623,16 +674,18 @@ export default function Requirement() {
 								</p>
 							</div>
 							<div className="mt-3 flex flex-col gap-3">
-								<PhoneField
-									value={phone}
-									onChange={(digits) => {
-										setPhone(digits);
-										if (phoneError) setPhoneError(null);
-									}}
-									error={phoneError}
-								/>
+								<div id="req-phone">
+									<PhoneField
+										value={phone}
+										onChange={(digits) => {
+											setPhone(digits);
+											if (phoneError) setPhoneError(null);
+										}}
+										error={phoneError}
+									/>
+								</div>
 								<div className="grid grid-cols-2 gap-3">
-									<div>
+									<div id="req-name">
 										<span className="mb-1.5 block text-[12px] font-bold text-ink">
 											First name
 										</span>
@@ -706,7 +759,7 @@ export default function Requirement() {
 							})}
 						</div>
 
-						<div className="mt-4">
+						<div className="mt-4" id="req-category">
 							{type === "property" ? (
 								<>
 									<span className="mb-2 block text-[12px] font-bold text-ink">
@@ -840,8 +893,17 @@ export default function Requirement() {
 										</span>
 										{/* Figma: Regular 8px, #6C6F7B */}
 										<span className="text-[10px] font-normal text-[#6c6f7b]">
-											select one or more
+											{showOther ? "select one or more" : "select one"}
 										</span>
+										{hasCategorySelection ? (
+											<button
+												type="button"
+												onClick={clearCategories}
+												className="ml-auto text-[10px] font-semibold text-primary"
+											>
+												Clear all
+											</button>
+										) : null}
 									</div>
 
 									<CategoryChips
@@ -851,14 +913,14 @@ export default function Requirement() {
 											type === "professional" && proIntent === "available"
 										}
 										error={categoryError}
-										trailing={otherChip}
+										trailing={showOther ? otherChip : undefined}
 										onChange={(ids) => {
 											if (type === "material") setMaterialCats(ids);
 											else setProCats(ids);
 											if (categoryError) setCategoryError(null);
 										}}
 									/>
-									{otherField}
+									{showOther ? otherField : null}
 								</>
 							)}
 
@@ -873,11 +935,18 @@ export default function Requirement() {
 												key={item.url}
 												className="relative h-16 w-16 overflow-hidden rounded-lg border border-line"
 											>
-												<img
-													src={item.url}
-													alt=""
-													className="h-full w-full object-cover"
-												/>
+												<button
+													type="button"
+													onClick={() => setAttachmentPreview(index)}
+													aria-label="Preview photo"
+													className="block h-full w-full"
+												>
+													<img
+														src={item.url}
+														alt=""
+														className="h-full w-full object-cover"
+													/>
+												</button>
 												<button
 													type="button"
 													onClick={() => removeAttachment(index)}
@@ -917,7 +986,7 @@ export default function Requirement() {
 							Add Your Requirement
 						</h2>
 
-						<div className="relative">
+						<div className="relative" id="req-description">
 							<textarea
 								value={description}
 								onChange={(event) => {
@@ -949,7 +1018,10 @@ export default function Requirement() {
 							</p>
 						) : null}
 
-						<span className="mb-1.5 mt-4 block text-[12px] font-bold text-ink">
+						<span
+							id="req-address"
+							className="mb-1.5 mt-4 block text-[12px] font-bold text-ink"
+						>
 							Address
 						</span>
 						<AddressAutocomplete
@@ -980,18 +1052,32 @@ export default function Requirement() {
 							<input
 								type="tel"
 								inputMode="numeric"
-								value={priceUnsure ? "" : price}
+								value={
+									priceUnsure || !price
+										? ""
+										: `₹ ${Number(price).toLocaleString("en-IN")}`
+								}
 								disabled={priceUnsure}
 								placeholder="Price around"
 								onChange={(event) =>
-									setPrice(event.target.value.replace(/[^\d]/g, ""))
+									// Digits only, capped at 10 — the ₹/commas are re-added on render.
+									setPrice(
+										event.target.value.replace(/[^\d]/g, "").slice(0, 10),
+									)
 								}
 								className="min-w-0 flex-1 rounded-[9px] border border-[#dae3ef] bg-white px-3.5 py-3 font-sans text-[12px] text-ink outline-none placeholder:font-medium placeholder:text-[#b2b8c2] focus:border-primary disabled:opacity-50"
 							/>
 							<button
 								type="button"
 								aria-pressed={priceUnsure}
-								onClick={() => setPriceUnsure((value) => !value)}
+								onClick={() =>
+									setPriceUnsure((value) => {
+										const next = !value;
+										// "Not sure" clears any entered price (mirrors the web).
+										if (next) setPrice("");
+										return next;
+									})
+								}
 								className={`shrink-0 rounded-[9px] border px-5 text-[14px] font-semibold ${
 									priceUnsure
 										? "border-primary bg-[#f5f7fb] text-primary"
@@ -1002,6 +1088,34 @@ export default function Requirement() {
 							</button>
 						</div>
 					</section>
+
+					{!isAuthed ? (
+						<div id="req-terms" className="mt-4">
+							<label className="flex items-start gap-2.5">
+								<input
+									type="checkbox"
+									checked={acceptedTerms}
+									onChange={(event) => {
+										setAcceptedTerms(event.target.checked);
+										if (termsError) setTermsError(null);
+									}}
+									className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+								/>
+								<span className="text-[11px] leading-snug text-muted">
+									I agree to the{" "}
+									<span className="font-semibold text-ink">
+										Terms of Service
+									</span>{" "}
+									and{" "}
+									<span className="font-semibold text-ink">Privacy Policy</span>
+									.
+								</span>
+							</label>
+							{termsError ? (
+								<p className="mt-1.5 text-[11px] text-danger">{termsError}</p>
+							) : null}
+						</div>
+					) : null}
 
 					<button
 						type="button"
@@ -1045,6 +1159,15 @@ export default function Requirement() {
 						</div>
 					</IonContent>
 				</IonModal>
+
+				{attachmentPreview !== null ? (
+					<Lightbox
+						images={attachments.map((a) => ({ src: a.url }))}
+						index={attachmentPreview}
+						onIndexChange={setAttachmentPreview}
+						onClose={() => setAttachmentPreview(null)}
+					/>
+				) : null}
 			</IonContent>
 		</IonPage>
 	);

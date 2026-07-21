@@ -4,6 +4,7 @@ import {
 	notifyErrorResponse,
 	notifySuccessResponse,
 } from "@/lib/api/middleware";
+import { toastWarning } from "@/lib/api/toast";
 import {
 	clearSession,
 	getAccessToken,
@@ -120,10 +121,21 @@ function refreshSession(): Promise<string | null> {
 	return inFlight;
 }
 
+/**
+ * A session that can't be refreshed is expired — clear it and tell the user
+ * once (the generic 401 error toast is already suppressed for authed requests,
+ * so this is the only message). The reactive session store flips the UI to the
+ * signed-out state on its own.
+ */
+function forceLogout(): void {
+	clearSession();
+	toastWarning("Your session has expired. Please log in again.");
+}
+
 async function doRefresh(): Promise<string | null> {
 	const refreshToken = getRefreshToken();
 	if (!refreshToken) {
-		clearSession();
+		forceLogout();
 		return null;
 	}
 	try {
@@ -134,7 +146,7 @@ async function doRefresh(): Promise<string | null> {
 		storeSession(result);
 		return result.accessToken;
 	} catch (err) {
-		if (isApiError(err) && err.status === 401) clearSession();
+		if (isApiError(err) && err.status === 401) forceLogout();
 		return null;
 	}
 }

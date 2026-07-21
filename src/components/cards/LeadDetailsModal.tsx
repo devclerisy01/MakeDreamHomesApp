@@ -1,11 +1,16 @@
 import { IonIcon } from "@ionic/react";
 import { locationOutline, timeOutline, walletOutline } from "ionicons/icons";
+import { useState } from "react";
 
 import { BoxModal } from "@/components/common/BoxModal";
+import { Lightbox } from "@/components/common/Lightbox";
 import { SaveButton } from "@/components/common/SaveButton";
 import { assetUrl } from "@/lib/asset";
+import { useAuth } from "@/lib/auth/session";
+import { useStartChat } from "@/lib/chat/use-start-chat";
 import { formatBudget, timeAgo } from "@/lib/format";
 import { TAG_MUTED } from "@/lib/ui";
+import { ICONS } from "@/theme/icons";
 import type { Lead } from "@/types";
 
 /**
@@ -24,8 +29,18 @@ export function LeadDetailsModal({
 	onClose: () => void;
 	owned?: boolean;
 }) {
+	const { user } = useAuth();
+	const { startChat, busy: chatBusy } = useStartChat();
 	const budget = formatBudget(lead.budget);
 	const posted = timeAgo(lead.createdAt);
+	// All preferred localities joined; fall back to the flat location.
+	const localityLabel = lead.localities?.length
+		? lead.localities.join(" | ")
+		: lead.location;
+	// Can message the poster when the lead is tied to a user that isn't the
+	// viewer, and it isn't the viewer's own lead. (Logged-out → login prompt.)
+	const canMessage =
+		!owned && !!lead.userId && String(lead.userId) !== String(user?.id ?? "");
 	// Always show the full requirement description in the body. Only skip it when
 	// it's identical to the heading (i.e. there was no separate summary).
 	const fullDescription = lead.description?.trim();
@@ -33,6 +48,7 @@ export function LeadDetailsModal({
 	const images = (lead.images ?? [])
 		.map((src) => assetUrl(src))
 		.filter((src): src is string => Boolean(src));
+	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
 	return (
 		<BoxModal isOpen={isOpen} onClose={onClose} title="Lead details">
@@ -64,23 +80,29 @@ export function LeadDetailsModal({
 				{images.length > 0 ? (
 					<div className="flex flex-wrap gap-2">
 						{images.map((src, i) => (
-							<img
+							<button
 								key={i}
-								src={src}
-								alt=""
-								loading="lazy"
-								className="h-20 w-20 rounded-xl border border-line object-cover"
-							/>
+								type="button"
+								onClick={() => setLightboxIndex(i)}
+								className="h-20 w-20 overflow-hidden rounded-xl border border-line"
+							>
+								<img
+									src={src}
+									alt=""
+									loading="lazy"
+									className="h-full w-full object-cover"
+								/>
+							</button>
 						))}
 					</div>
 				) : null}
 
 				<div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
 					<div className="flex flex-col gap-1.5 text-[13px] text-muted-light">
-						{lead.location ? (
+						{localityLabel ? (
 							<span className="inline-flex items-center gap-1.5">
 								<IonIcon icon={locationOutline} className="text-[15px]" />
-								{lead.location}
+								{localityLabel}
 							</span>
 						) : null}
 						{posted ? (
@@ -92,7 +114,28 @@ export function LeadDetailsModal({
 					</div>
 					{owned ? null : <SaveButton entityType="leads" entityId={lead.id} />}
 				</div>
+
+				{canMessage ? (
+					<button
+						type="button"
+						onClick={() => startChat(lead.userId as string, lead.id)}
+						disabled={chatBusy}
+						className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-primary py-3 text-[14px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
+					>
+						<IonIcon icon={ICONS.message} className="text-[17px]" />
+						Send Message
+					</button>
+				) : null}
 			</div>
+
+			{lightboxIndex !== null ? (
+				<Lightbox
+					images={images.map((src) => ({ src }))}
+					index={lightboxIndex}
+					onIndexChange={setLightboxIndex}
+					onClose={() => setLightboxIndex(null)}
+				/>
+			) : null}
 		</BoxModal>
 	);
 }

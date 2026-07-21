@@ -5,16 +5,20 @@ import {
 	IonTabBar,
 	IonTabButton,
 	IonTabs,
+	useIonRouter,
 } from "@ionic/react";
 import { Redirect, Route } from "react-router-dom";
 
 import { Avatar } from "@/components/common/Avatar";
+import { ROUTES } from "@/constants/routes";
 import { ICONS } from "@/theme/icons";
 
 import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
+import Conversation from "@/pages/Conversation";
 import Home from "@/pages/Home";
 import Leads from "@/pages/Leads";
+import Messages from "@/pages/Messages";
 import ProfessionalDetail from "@/pages/ProfessionalDetail";
 import Professionals from "@/pages/Professionals";
 import Profile from "@/pages/Profile";
@@ -28,6 +32,7 @@ import Requirement from "@/pages/Requirement";
 export function TabsShell() {
 	const { isAuthed, user } = useAuth();
 	const { openLogin } = useLogin();
+	const router = useIonRouter();
 
 	const profileName =
 		[user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
@@ -56,6 +61,12 @@ export function TabsShell() {
 				</Route>
 				<Route exact path="/profile">
 					<Profile />
+				</Route>
+				<Route exact path="/messages">
+					<Messages />
+				</Route>
+				<Route exact path="/messages/:id">
+					<Conversation />
 				</Route>
 				<Route exact path="/">
 					<Redirect to="/home" />
@@ -96,7 +107,13 @@ export function TabsShell() {
 				) : (
 					<IonTabButton
 						tab="login"
-						onClick={() => openLogin()}
+						// A bare nav login (no gated action) lands on the profile once
+						// signed in — mirrors the web's nav-login → profile redirect.
+						onClick={() =>
+							openLogin({
+								onAuthenticated: () => router.push(ROUTES.profile, "root"),
+							})
+						}
 						// No `href`: sign-in is an in-place popup, not a route.
 					>
 						<IonIcon icon={ICONS.tabLogin} />

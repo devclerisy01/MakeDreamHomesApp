@@ -79,6 +79,37 @@ export function SkeletonList({
 }
 
 /**
+ * Mirrors a `ReviewsList` card: an avatar + name/stars header, two comment
+ * lines, a time row, and a block of sub-category bars.
+ */
+export function ReviewCardSkeleton() {
+	return (
+		<div className={`p-4 ${CARD}`}>
+			<div className="flex items-center gap-3">
+				<div className="mdh-shimmer h-10 w-10 shrink-0 rounded-full" />
+				<div className="flex flex-1 flex-col gap-1.5">
+					<div className={`${BAR} h-3 w-1/3`} />
+					<div className={`${BAR} h-2.5 w-1/4`} />
+				</div>
+			</div>
+			<div className="mt-3 flex flex-col gap-1.5">
+				<div className={`${BAR} h-2.5 w-[92%]`} />
+				<div className={`${BAR} h-2.5 w-[70%]`} />
+			</div>
+			<div className="mt-3 flex flex-col gap-1.5 rounded-xl bg-surface-muted/60 p-2.5">
+				{Array.from({ length: 5 }, (_, i) => (
+					<div key={i} className="flex items-center gap-2">
+						<div className={`${BAR} h-2.5 w-20`} />
+						<div className={`${BAR} h-[5px] flex-1`} />
+						<div className={`${BAR} h-2.5 w-6`} />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+/**
  * A portfolio thumbnail grid skeleton (profile + detail showcase). `className`
  * overrides the grid so it can match the host's exact columns (the profile uses
  * a fixed 2-column grid, the detail showcase uses {@link PORTFOLIO_GRID}).
@@ -125,7 +156,7 @@ export function DetailSkeleton() {
 			<div className={`p-4 ${CARD}`}>
 				<div className={`${BAR} mb-3.5 h-4 w-40`} />
 				<div className="flex flex-col gap-3">
-					{Array.from({ length: 4 }, (_, i) => (
+					{Array.from({ length: 5 }, (_, i) => (
 						<div key={i} className="flex items-center justify-between">
 							<div className={`${BAR} h-3 w-1/3`} />
 							<div className={`${BAR} h-3 w-1/5`} />
@@ -133,6 +164,8 @@ export function DetailSkeleton() {
 					))}
 				</div>
 			</div>
+
+			<ReviewCardSkeleton />
 		</div>
 	);
 }

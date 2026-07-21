@@ -3,7 +3,11 @@ import { createOutline } from "ionicons/icons";
 import { useState } from "react";
 
 import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
-import { leadBaseCategory, leadIntentChip } from "@/lib/api/leads";
+import {
+	leadBaseCategory,
+	leadIntentChip,
+	leadStatusLabel,
+} from "@/lib/api/leads";
 import { formatBudget, timeAgo } from "@/lib/format";
 import { CARD } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
@@ -13,6 +17,16 @@ const CATEGORY_ICON: Record<LeadCategoryId, string> = {
 	property: ICONS.categoryProperty,
 	material: ICONS.categoryMaterial,
 	professional: ICONS.categoryProfessional,
+};
+
+/** Subtle status-pill colouring, keyed by the raw LeadStatus enum value. */
+const STATUS_CLASS: Record<string, string> = {
+	PENDING: "bg-amber-100 text-amber-700",
+	IN_PROCESS: "bg-blue-100 text-blue-700",
+	COMPLETED: "bg-green-100 text-green-700",
+	NOT_INTERESTED: "bg-slate-100 text-slate-600",
+	SPAM: "bg-red-100 text-red-700",
+	LOST: "bg-slate-100 text-slate-600",
 };
 
 /**
@@ -36,8 +50,13 @@ export function MyLeadCard({
 	const icon = CATEGORY_ICON[leadBaseCategory(lead.category)];
 	const title = lead.description?.trim() || lead.summary?.trim() || "";
 	const budget = formatBudget(lead.budget);
-	const tags = (lead.tags ?? []).slice(0, 3);
+	const allTags = lead.tags ?? [];
+	const tags = allTags.slice(0, 5);
+	const extraTags = allTags.length - tags.length;
 	const posted = timeAgo(lead.createdAt);
+	const localityLabel = lead.localities?.length
+		? lead.localities.join(" | ")
+		: lead.location;
 
 	const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -64,19 +83,30 @@ export function MyLeadCard({
 							<h3 className="m-0 line-clamp-2 text-[12px] font-bold leading-snug text-ink">
 								{title}
 							</h3>
-							{onEdit ? (
-								<button
-									type="button"
-									onClick={(event) => {
-										event.stopPropagation();
-										onEdit();
-									}}
-									aria-label="Edit requirement"
-									className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted"
-								>
-									<IonIcon icon={createOutline} className="text-[15px]" />
-								</button>
-							) : null}
+							<div className="flex shrink-0 items-center gap-1.5">
+								{lead.status ? (
+									<span
+										className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold ${
+											STATUS_CLASS[lead.status] ?? "bg-slate-100 text-slate-600"
+										}`}
+									>
+										{leadStatusLabel(lead.status)}
+									</span>
+								) : null}
+								{onEdit ? (
+									<button
+										type="button"
+										onClick={(event) => {
+											event.stopPropagation();
+											onEdit();
+										}}
+										aria-label="Edit requirement"
+										className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted"
+									>
+										<IonIcon icon={createOutline} className="text-[15px]" />
+									</button>
+								) : null}
+							</div>
 						</div>
 						<div className="mt-2 flex flex-wrap items-center gap-1.5">
 							{tags.map((tag) => (
@@ -87,6 +117,11 @@ export function MyLeadCard({
 									{tag}
 								</span>
 							))}
+							{extraTags > 0 ? (
+								<span className="inline-flex items-center whitespace-nowrap rounded-[4px] border border-[#d7dded] bg-white px-[7px] py-1 text-[8px] font-bold leading-none text-[#6f7791]">
+									+{extraTags}
+								</span>
+							) : null}
 							{posted ? (
 								<span className="ml-auto whitespace-nowrap text-[10px] text-[#868686]">
 									{posted}
@@ -97,10 +132,10 @@ export function MyLeadCard({
 				</div>
 
 				<div className="mt-2.5 flex items-center justify-between gap-2.5 border-t border-line pt-2.5">
-					{lead.location ? (
+					{localityLabel ? (
 						<span className="inline-flex min-w-0 items-center gap-1 text-[10px] text-[#6f7791]">
 							<IonIcon icon={ICONS.location} className="shrink-0 text-[12px]" />
-							<span className="truncate">{lead.location}</span>
+							<span className="truncate">{localityLabel}</span>
 						</span>
 					) : (
 						<span />
@@ -111,7 +146,7 @@ export function MyLeadCard({
 								icon={ICONS.budget}
 								className="text-[12px] text-muted-light"
 							/>
-							Est. Price: <span className="font-bold">{budget}</span>
+							Budget: <span className="font-bold">{budget}</span>
 						</span>
 					) : null}
 				</div>

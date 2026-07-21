@@ -9,6 +9,9 @@ import { useEffect, useState } from "react";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { formatPhone } from "@/lib/format";
 
+/** Max OTP requests (initial send + resends) before the user must go back. */
+const MAX_OTP_REQUESTS = 5;
+
 interface OtpVerifyProps {
 	/** Bare phone digits — formatted for display inside. */
 	phone: string;
@@ -46,6 +49,10 @@ export function OtpVerify({
 }: OtpVerifyProps) {
 	const [code, setCode] = useState("");
 	const [secondsLeft, setSecondsLeft] = useState(resendAfter);
+	// Cap the total number of code requests (mirrors the web's DEFAULT_MAX_REQUESTS).
+	// The initial send that brought the user here counts as request #1.
+	const [requestCount, setRequestCount] = useState(1);
+	const capReached = requestCount >= MAX_OTP_REQUESTS;
 
 	useEffect(() => {
 		const id = setInterval(
@@ -62,9 +69,10 @@ export function OtpVerify({
 	}
 
 	async function resend() {
-		if (secondsLeft > 0 || submitting) return;
+		if (secondsLeft > 0 || submitting || capReached) return;
 		try {
 			setSecondsLeft(await onResend());
+			setRequestCount((count) => count + 1);
 			setCode("");
 		} catch {
 			/* the parent surfaces resend failures via a toast */
@@ -114,15 +122,31 @@ export function OtpVerify({
 				) : null}
 
 				<p className="mt-4 text-sm text-muted-light">
-					Didn&apos;t get the code?{" "}
-					<button
-						type="button"
-						onClick={resend}
-						disabled={secondsLeft > 0 || submitting}
-						className="font-bold text-primary disabled:font-semibold disabled:text-muted-light"
-					>
-						{secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend"}
-					</button>
+					{capReached ? (
+						<>
+							No attempts left.{" "}
+							<button
+								type="button"
+								onClick={onChangeNumber}
+								className="font-bold text-primary"
+							>
+								Change number
+							</button>{" "}
+							to try again.
+						</>
+					) : (
+						<>
+							Didn&apos;t get the code?{" "}
+							<button
+								type="button"
+								onClick={resend}
+								disabled={secondsLeft > 0 || submitting}
+								className="font-bold text-primary disabled:font-semibold disabled:text-muted-light"
+							>
+								{secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend"}
+							</button>
+						</>
+					)}
 				</p>
 
 				<button

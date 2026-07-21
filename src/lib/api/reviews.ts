@@ -1,4 +1,5 @@
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiGetEnvelope, apiPost } from "@/lib/api/client";
+import type { ProfessionalReview } from "@/types";
 
 /**
  * Reviews API — a signed-in user reviewing another user. Mirrors the web
@@ -20,6 +21,32 @@ export interface SubmitReviewInput {
 /** Submit a review (creates a PENDING review). Success/errors toast centrally. */
 export function submitReview(input: SubmitReviewInput): Promise<unknown> {
 	return apiPost("/app/reviews", input, { auth: true });
+}
+
+/**
+ * A page of a professional's published reviews. The detail endpoint embeds only
+ * the first page; deeper pages come from here (public, mirrors the web). Fails
+ * soft to an empty page.
+ */
+export async function fetchUserReviews(
+	userId: string,
+	page: number,
+	limit = 4,
+	signal?: AbortSignal,
+): Promise<{ items: ProfessionalReview[]; totalPages: number }> {
+	try {
+		const params = new URLSearchParams({
+			page: String(page),
+			limit: String(limit),
+		});
+		const { data, meta } = await apiGetEnvelope<ProfessionalReview[]>(
+			`/app/users/${userId}/reviews?${params.toString()}`,
+			{ signal },
+		);
+		return { items: data ?? [], totalPages: meta?.totalPages ?? 0 };
+	} catch {
+		return { items: [], totalPages: 0 };
+	}
 }
 
 /** Whether the signed-in user has already reviewed the target (any status). */

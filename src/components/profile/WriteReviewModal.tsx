@@ -28,7 +28,11 @@ const EMPTY: Ratings = {
 	behaviour: 0,
 	timeliness: 0,
 	communication: 0,
+	price: 0,
 };
+
+/** Max characters accepted in the optional comment (matches the web form). */
+const COMMENT_MAX = 1000;
 
 /**
  * Collects the five category star ratings + an optional comment and submits a
@@ -72,8 +76,7 @@ export function WriteReviewModal({
 				behaviour: ratings.behaviour,
 				timeliness: ratings.timeliness,
 				communication: ratings.communication,
-				// Price category was removed from the UI; API still expects the field.
-				price: 0,
+				price: ratings.price,
 				...(comment.trim() ? { comment: comment.trim() } : {}),
 			});
 			// Success is toasted centrally (reviews.submitted).
@@ -122,11 +125,16 @@ export function WriteReviewModal({
 								key={cat.key}
 								className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-white px-3.5 py-3"
 							>
-								<span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
-									<span className="text-base">{cat.icon}</span>
-									{cat.label}
+								<span className="flex min-w-0 flex-col">
+									<span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+										<span className="text-base">{cat.icon}</span>
+										{cat.label}
+									</span>
+									<span className="mt-0.5 text-[11px] leading-snug text-muted-light">
+										{cat.desc}
+									</span>
 								</span>
-								<div className="flex gap-1">
+								<div className="flex shrink-0 gap-1">
 									{[1, 2, 3, 4, 5].map((value) => (
 										<button
 											key={value}
@@ -147,12 +155,17 @@ export function WriteReviewModal({
 						))}
 
 						<div>
-							<span className="mb-1.5 block text-sm font-semibold text-ink">
-								Comment (optional)
-							</span>
+							<div className="mb-1.5 flex items-center justify-between gap-2">
+								<span className="text-sm font-semibold text-ink">
+									Comment (optional)
+								</span>
+								<span className="text-[11px] font-medium text-muted-light">
+									{comment.length}/{COMMENT_MAX}
+								</span>
+							</div>
 							<TextField
 								value={comment}
-								onChange={setComment}
+								onChange={(next) => setComment(next.slice(0, COMMENT_MAX))}
 								placeholder="Share the details of your experience"
 								multiline
 								rows={4}

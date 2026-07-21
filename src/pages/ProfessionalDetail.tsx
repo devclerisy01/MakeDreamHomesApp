@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom";
 import { PortfolioCard } from "@/components/cards/PortfolioCard";
 import { ProfessionalCard } from "@/components/cards/ProfessionalCard";
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
+import { ReviewsList } from "@/components/cards/ReviewsList";
 import { Avatar } from "@/components/common/Avatar";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ReadMoreText } from "@/components/common/ReadMoreText";
@@ -19,6 +20,7 @@ import {
 	getProfessionalDetail,
 } from "@/lib/api/professionals";
 import { hasReviewed } from "@/lib/api/reviews";
+import { useStartChat } from "@/lib/chat/use-start-chat";
 import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
 import {
@@ -54,6 +56,7 @@ export default function ProfessionalDetail() {
 	const { slug } = useParams<{ slug: string }>();
 	const { isAuthed, user } = useAuth();
 	const { openLogin } = useLogin();
+	const { startChat, busy: chatBusy } = useStartChat();
 	const [pro, setPro] = useState<ProDetail | null>(null);
 	const [status, setStatus] = useState<Status>("loading");
 	const [reviewOpen, setReviewOpen] = useState(false);
@@ -203,6 +206,18 @@ export default function ProfessionalDetail() {
 										</div>
 									</section>
 
+									{!isOwnProfile ? (
+										<button
+											type="button"
+											onClick={() => startChat(pro.id)}
+											disabled={chatBusy}
+											className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] bg-primary py-3 text-[14px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
+										>
+											<IonIcon icon={ICONS.message} className="text-[17px]" />
+											Send Message
+										</button>
+									) : null}
+
 									{pro.portfolio?.length ? (
 										<section className="mt-[22px]">
 											<div className={SECTION_HEAD}>
@@ -219,11 +234,21 @@ export default function ProfessionalDetail() {
 									) : null}
 
 									<section className="mt-[22px]">
-										{(pro.reviewsCount ?? 0) > 0 && pro.reviewsBreakdown ? (
-											<RatingBreakdown
-												breakdown={pro.reviewsBreakdown}
-												action={writeReviewButton}
-											/>
+										{(pro.reviewsCount ?? pro.reviews?.length ?? 0) > 0 ? (
+											<div className="flex flex-col gap-[22px]">
+												{pro.reviewsBreakdown ? (
+													<RatingBreakdown
+														breakdown={pro.reviewsBreakdown}
+														count={pro.reviewsCount}
+														action={writeReviewButton}
+													/>
+												) : null}
+												<ReviewsList
+													userId={pro.id}
+													initialReviews={pro.reviews ?? []}
+													total={pro.reviewsCount ?? pro.reviews?.length ?? 0}
+												/>
+											</div>
 										) : (
 											<div className={`p-4 ${CARD}`}>
 												<div className="mb-3 flex items-center justify-between gap-2">
@@ -232,12 +257,22 @@ export default function ProfessionalDetail() {
 													</h2>
 													{writeReviewButton}
 												</div>
-												<p className="m-0 rounded-2xl border border-dashed border-line bg-surface-muted px-4 py-6 text-center text-[13px] text-muted-light">
-													No reviews yet.
-													{!isOwnProfile && !alreadyReviewed
-														? " Be the first to review."
-														: ""}
-												</p>
+												<div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-surface-muted px-6 py-8 text-center">
+													<span className="grid h-14 w-14 place-items-center rounded-full bg-[#F5A623]/10 text-[#F5A623]">
+														<IonIcon
+															icon={ICONS.star}
+															className="text-[26px]"
+														/>
+													</span>
+													<h3 className="mt-3 text-[15px] font-bold text-ink">
+														No reviews yet
+													</h3>
+													<p className="mt-1 max-w-[260px] text-[12px] leading-relaxed text-muted-light">
+														{!isOwnProfile && !alreadyReviewed
+															? "Be the first to share your experience and help others decide."
+															: "Reviews from customers will appear here."}
+													</p>
+												</div>
 											</div>
 										)}
 									</section>
