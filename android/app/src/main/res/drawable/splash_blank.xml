@@ -1,0 +1,21 @@
+<!--
+  Fully transparent icon for the Android 12+ system splash.
+
+  The OS always draws a system splash (background + icon) during cold start, before
+  the WebView exists — it cannot be disabled. Using a blank icon means that splash
+  shows ONLY the white background (no logo), so it doesn't read as a separate
+  "logo screen": it's just the plain backdrop that the branded web splash
+  (src/components/splash/SplashScreen.tsx) then animates in on top of.
+
+  If windowSplashScreenAnimatedIcon is omitted entirely, Android falls back to the
+  launcher icon — hence this explicit transparent drawable to suppress it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1dp"
+    android:height="1dp"
+    android:viewportWidth="1"
+    android:viewportHeight="1">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,0h1v1h-1z" />
+</vector>

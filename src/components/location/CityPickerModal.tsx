@@ -1,5 +1,5 @@
 import { IonIcon, IonModal } from "@ionic/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { UI_MESSAGES } from "@/constants/messages";
 import {
@@ -8,7 +8,7 @@ import {
 	persistSearchedCity,
 } from "@/lib/api/locations";
 import { placeDetails, type PlacePrediction } from "@/lib/api/places";
-import { CITY_RADIUS_KM, distanceKm, nearestCity } from "@/lib/geo/geo";
+import { CITY_RADIUS_KM, nearestCity } from "@/lib/geo/geo";
 import {
 	locationFromCity,
 	type SelectedLocation,
@@ -26,8 +26,6 @@ interface CityPickerModalProps {
 	value?: string;
 	onSelect: (loc: SelectedLocation) => void;
 }
-
-const VISIBLE_LIMIT = 8;
 
 function newSessionToken(): string {
 	const c = globalThis.crypto;
@@ -90,38 +88,6 @@ export function CityPickerModal({
 			if (timeoutRef.current) clearTimeout(timeoutRef.current);
 		};
 	}, [query]);
-
-	// Nearby verified cities, ranked by distance from the active city (or first).
-	const nearby = useMemo(() => {
-		const centre = cities.find((c) => c.city === value) ?? cities[0] ?? null;
-		const clat = Number(centre?.latitude);
-		const clng = Number(centre?.longitude);
-		const ranked =
-			Number.isFinite(clat) && Number.isFinite(clng)
-				? [...cities].sort((a, b) => {
-						const da = distanceKm(
-							clat,
-							clng,
-							Number(a.latitude),
-							Number(a.longitude),
-						);
-						const db = distanceKm(
-							clat,
-							clng,
-							Number(b.latitude),
-							Number(b.longitude),
-						);
-						return da - db;
-					})
-				: cities;
-		const top = ranked.slice(0, VISIBLE_LIMIT);
-		// Keep the active city visible even if it falls outside the top N.
-		if (value && !top.some((c) => c.city === value)) {
-			const active = cities.find((c) => c.city === value);
-			if (active) top.unshift(active);
-		}
-		return top;
-	}, [cities, value]);
 
 	function pickCity(city: CityOption) {
 		const loc = locationFromCity(city);
@@ -263,22 +229,7 @@ export function CityPickerModal({
 								</p>
 							) : null}
 						</>
-					) : (
-						<>
-							<p className="px-2 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-light">
-								Popular cities
-							</p>
-							{nearby.map((c) => (
-								<CityRow
-									key={c.id}
-									label={c.city}
-									sub={c.state}
-									active={c.city === value}
-									onClick={() => pickCity(c)}
-								/>
-							))}
-						</>
-					)}
+					) : null}
 				</div>
 			</div>
 		</IonModal>

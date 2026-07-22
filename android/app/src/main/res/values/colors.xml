@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ system splash background. Matches the branded splash.png
+         and the web animated splash (both white) so there is no colour jump
+         across the native → Capacitor → web splash hand-off. -->
+    <color name="splash_background">#FFFFFF</color>
+</resources>

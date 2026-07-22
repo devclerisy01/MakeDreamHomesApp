@@ -50,12 +50,8 @@ export function AnimatedLogo({
 				style={{ willChange: "transform, opacity" }}
 			/>
 			{/* Logo mark on the white splash background (dark moon + blue house). */}
-			<motion.div
-				variants={markVariants}
-				initial={reducedMotion ? "visible" : "hidden"}
-				animate="visible"
+			<div
 				className="relative"
-				style={{ willChange: "transform, opacity" }}
 			>
 				<svg
 					viewBox="0 0 37 37"
@@ -76,7 +72,7 @@ export function AnimatedLogo({
 						fill="currentColor"
 					/>
 				</svg>
-			</motion.div>
+			</div>
 		</div>
 	);
 }

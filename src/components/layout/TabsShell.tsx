@@ -1,12 +1,14 @@
 import {
 	IonIcon,
 	IonLabel,
+	IonPage,
 	IonRouterOutlet,
 	IonTabBar,
 	IonTabButton,
 	IonTabs,
 	useIonRouter,
 } from "@ionic/react";
+import { Suspense, lazy } from "react";
 import { Redirect, Route } from "react-router-dom";
 
 import { Avatar } from "@/components/common/Avatar";
@@ -15,14 +17,23 @@ import { ICONS } from "@/theme/icons";
 
 import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
-import Conversation from "@/pages/Conversation";
-import Home from "@/pages/Home";
-import Leads from "@/pages/Leads";
-import Messages from "@/pages/Messages";
-import ProfessionalDetail from "@/pages/ProfessionalDetail";
-import Professionals from "@/pages/Professionals";
-import Profile from "@/pages/Profile";
-import Requirement from "@/pages/Requirement";
+
+// Pages are lazy-loaded so they are NOT in the initial bundle — only the shell
+// (and the current route's chunk) loads at boot, which shrinks the splash-to-app
+// wait considerably. Each page brings in its own forms/logic on demand.
+const Conversation = lazy(() => import("@/pages/Conversation"));
+const Home = lazy(() => import("@/pages/Home"));
+const Leads = lazy(() => import("@/pages/Leads"));
+const Messages = lazy(() => import("@/pages/Messages"));
+const ProfessionalDetail = lazy(() => import("@/pages/ProfessionalDetail"));
+const Professionals = lazy(() => import("@/pages/Professionals"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const Requirement = lazy(() => import("@/pages/Requirement"));
+
+// Fallback shown while a page's chunk loads. An empty IonPage keeps the router
+// outlet's transition well-formed; each page renders its own skeleton loader
+// once its chunk arrives.
+const pageFallback = <IonPage />;
 
 /**
  * App shell: five tabs over the routed pages. Sign-in and sign-up are both
@@ -45,28 +56,44 @@ export function TabsShell() {
 		<IonTabs>
 			<IonRouterOutlet id="main-content">
 				<Route exact path="/home">
-					<Home />
+					<Suspense fallback={pageFallback}>
+						<Home />
+					</Suspense>
 				</Route>
 				<Route exact path="/leads">
-					<Leads />
+					<Suspense fallback={pageFallback}>
+						<Leads />
+					</Suspense>
 				</Route>
 				<Route exact path="/requirement">
-					<Requirement />
+					<Suspense fallback={pageFallback}>
+						<Requirement />
+					</Suspense>
 				</Route>
 				<Route exact path="/professionals">
-					<Professionals />
+					<Suspense fallback={pageFallback}>
+						<Professionals />
+					</Suspense>
 				</Route>
 				<Route exact path="/professionals/:slug">
-					<ProfessionalDetail />
+					<Suspense fallback={pageFallback}>
+						<ProfessionalDetail />
+					</Suspense>
 				</Route>
 				<Route exact path="/profile">
-					<Profile />
+					<Suspense fallback={pageFallback}>
+						<Profile />
+					</Suspense>
 				</Route>
 				<Route exact path="/messages">
-					<Messages />
+					<Suspense fallback={pageFallback}>
+						<Messages />
+					</Suspense>
 				</Route>
 				<Route exact path="/messages/:id">
-					<Conversation />
+					<Suspense fallback={pageFallback}>
+						<Conversation />
+					</Suspense>
 				</Route>
 				<Route exact path="/">
 					<Redirect to="/home" />
