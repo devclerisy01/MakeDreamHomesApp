@@ -42,6 +42,12 @@ interface ApiUser {
 		count?: string | number;
 		items?: PortfolioItem[];
 	};
+	/** Supplier-only: stocked brands + authorized-dealer brands (name arrays). */
+	brands?: string[];
+	authorizedBrands?: string[];
+	/** Dealer-only: RERA certification. */
+	isReraCertified?: boolean;
+	reraNumber?: string | null;
 }
 
 const toNumber = (value: string | number | undefined): number => {
@@ -93,6 +99,11 @@ function toProfessionalListing(
 		experienceYears: toNumber(user.experienceYears),
 		leadCount: toNumber(user.leadCount),
 		showcase: toShowcase(user, category),
+		// Supplier/dealer extras — only present for their track, undefined otherwise.
+		brands: user.brands,
+		authorizedBrands: user.authorizedBrands,
+		isReraCertified: user.isReraCertified,
+		reraNumber: user.reraNumber ?? null,
 	};
 }
 
@@ -125,11 +136,16 @@ export interface DirectoryQuery extends GeoQuery {
 	hasReviews?: boolean;
 	/** Only professionals with an approved portfolio. */
 	hasPortfolio?: boolean;
+	/** Selected brand ids (suppliers track) — sent as repeated `brand` params. */
+	brands?: string[];
 }
 
 export interface DirectoryPage {
 	items: ProfessionalListing[];
 	totalPages: number;
+	totalItems?: number;
+	/** Per-track counts from `meta.counts` (Saved Professionals tabs). */
+	counts?: Record<string, number>;
 }
 
 /** One selectable locality within a city facet, with its result count + token. */
@@ -146,6 +162,21 @@ export interface LocationFacet {
 	id: string;
 	label: string;
 	areas: LocationArea[];
+}
+
+/** One brand facet (suppliers) with its result count; `value` is the brand id. */
+export interface BrandFacet {
+	id: string;
+	label: string;
+	count: number;
+	value: string;
+}
+
+/** Directory filter facets returned by `/app/users/filters`. */
+export interface DirectoryFilters {
+	locations: LocationFacet[];
+	/** Populated for the suppliers track only; empty otherwise. */
+	brands: BrandFacet[];
 }
 
 function buildDirectoryParams(query: DirectoryQuery): URLSearchParams {
@@ -169,6 +200,7 @@ function buildDirectoryParams(query: DirectoryQuery): URLSearchParams {
 	for (const token of query.places ?? []) params.append("places", token);
 	if (query.hasReviews) params.set("hasReviews", "true");
 	if (query.hasPortfolio) params.set("hasPortfolio", "true");
+	for (const brand of query.brands ?? []) params.append("brand", brand);
 	return params;
 }
 
@@ -186,7 +218,12 @@ async function fetchUserPage(
 	const items = (data ?? []).map((user) =>
 		toProfessionalListing(user, query.category ?? "professionals"),
 	);
-	return { items, totalPages: meta?.totalPages ?? 0 };
+	return {
+		items,
+		totalPages: meta?.totalPages ?? 0,
+		totalItems: meta?.total ?? 0,
+		counts: meta?.counts,
+	};
 }
 
 /** One page of the public users API, normalized into `ProfessionalListing`s. */
@@ -205,7 +242,7 @@ export function fetchProfessionals(
 export async function fetchDirectoryFilters(
 	query: DirectoryQuery = {},
 	signal?: AbortSignal,
-): Promise<LocationFacet[]> {
+): Promise<DirectoryFilters> {
 	const params = new URLSearchParams();
 	if (query.category) {
 		params.set("userType", USER_TYPE_BY_CATEGORY[query.category]);
@@ -224,11 +261,11 @@ export async function fetchDirectoryFilters(
 	// Scope facet counts by the selected city's radius (matches the listing).
 	applyGeoScopeParams(params, query);
 
-	const data = await apiGet<{ locations: LocationFacet[] }>(
-		`/app/users/filters?${params.toString()}`,
-		{ signal },
-	);
-	return data.locations ?? [];
+	const data = await apiGet<{
+		locations?: LocationFacet[];
+		brands?: BrandFacet[];
+	}>(`/app/users/filters?${params.toString()}`, { signal });
+	return { locations: data.locations ?? [], brands: data.brands ?? [] };
 }
 
 /** One page of the signed-in user's shortlisted professionals (auth). */

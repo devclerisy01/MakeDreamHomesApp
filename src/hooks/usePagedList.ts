@@ -17,6 +17,8 @@ export interface PagedList<T> {
 	reload: () => void;
 	/** Drop the already-loaded items matching `predicate` (e.g. on unsave). */
 	removeItem: (predicate: (item: T) => boolean) => void;
+	/** Replace the already-loaded items matching `predicate` (e.g. after an edit). */
+	updateItem: (predicate: (item: T) => boolean, next: (item: T) => T) => void;
 }
 
 /**
@@ -79,5 +81,14 @@ export function usePagedList<T>(
 		setItems((prev) => prev.filter((item) => !predicate(item)));
 	}, []);
 
-	return { items, status, hasMore, loadMore, reload, removeItem };
+	const updateItem = useCallback(
+		(predicate: (item: T) => boolean, next: (item: T) => T) => {
+			setItems((prev) =>
+				prev.map((item) => (predicate(item) ? next(item) : item)),
+			);
+		},
+		[],
+	);
+
+	return { items, status, hasMore, loadMore, reload, removeItem, updateItem };
 }

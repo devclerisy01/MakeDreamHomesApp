@@ -26,6 +26,11 @@ export interface PortfolioItem {
 	location?: string;
 	address?: string;
 	image?: string;
+	/** Full image set (supplier products carry it inline; portfolios load on tap). */
+	images?: string[];
+	/** Supplier product only: brand names, and which of them are authorized-dealer. */
+	brands?: string[];
+	authorizedBrands?: string[];
 }
 
 /** Which kind of items a card's showcase strip holds, by track. */
@@ -56,6 +61,13 @@ export interface ProfessionalListing {
 	experienceYears: number;
 	leadCount?: number;
 	showcase?: Showcase;
+	/** Supplier only: brand names the supplier stocks. */
+	brands?: string[];
+	/** Supplier only: brands the supplier is an authorized dealer of. */
+	authorizedBrands?: string[];
+	/** Dealer only: RERA certification flag + number (number only when certified). */
+	isReraCertified?: boolean;
+	reraNumber?: string | null;
 }
 
 /** Aggregate per-category rating averages backing the "Rating & Reviews" breakdown. */

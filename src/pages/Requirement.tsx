@@ -10,7 +10,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { OtpVerify } from "@/components/auth/OtpVerify";
 import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
-import { AddressAutocomplete } from "@/components/common/AddressAutocomplete";
+import { LocalityPicker } from "@/components/common/LocalityPicker";
 import { CategoryChips } from "@/components/common/CategoryChips";
 import { Lightbox } from "@/components/common/Lightbox";
 import { TextField } from "@/components/common/TextField";
@@ -20,9 +20,10 @@ import { UI_MESSAGES } from "@/constants/messages";
 import { ROUTES } from "@/constants/routes";
 import {
 	checkPhone,
+	isPhoneAvailable,
 	otpRegister,
 	requestOtp,
-	type RegisterInput,
+	type SignupDraft,
 } from "@/lib/api/auth";
 import {
 	createRequirement,
@@ -47,7 +48,6 @@ import { CARD } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
 
 type Intent = "buy" | "sell";
-type ProIntent = "hire" | "available";
 
 const OPTIONS: { type: RequirementType; label: string; icon: string }[] = [
 	{
@@ -57,11 +57,6 @@ const OPTIONS: { type: RequirementType; label: string; icon: string }[] = [
 	},
 	{ type: "property", label: "Buy / Sell Properties", icon: ICONS.reqProperty },
 	{ type: "material", label: "Material Suppliers", icon: ICONS.reqMaterial },
-];
-
-const PRO_INTENTS: { value: ProIntent; label: string }[] = [
-	{ value: "hire", label: "Hire a Professional" },
-	{ value: "available", label: "I'm Available for Work" },
 ];
 
 const PROPERTY_GROUPS = [
@@ -122,8 +117,8 @@ const CHIP_OFF = "border-line bg-white text-muted";
 
 /**
  * Post Your Requirement — mirrors the web post-requirement form's fields: a
- * track (Hire Professionals / Buy-Sell Property / Material Suppliers); the
- * professional hire-vs-available toggle; a buy/sell intent (property + material)
+ * track (Hire Professionals / Buy-Sell Property / Material Suppliers); a buy/sell
+ * intent (property + material)
  * with sell-only image attachments; category chips + an "Other" free-text option
  * (professional + material) or a two-level property picker (group → type) plus a
  * society/commercial name; then description (typed or dictated), address and an
@@ -135,14 +130,14 @@ export default function Requirement() {
 	const { isAuthed } = useAuth();
 	const { openLogin } = useLogin();
 
-	const [type, setType] = useState<RequirementType>("professional");
-	const [proIntent, setProIntent] = useState<ProIntent>("hire");
+	const [type, setType] = useState<RequirementType | null>(null);
 	const [intent, setIntent] = useState<Intent>("buy");
 
 	const [proCats, setProCats] = useState<number[]>([]);
 	const [materialCats, setMaterialCats] = useState<number[]>([]);
 	const [otherActive, setOtherActive] = useState(false);
-	const [otherCategory, setOtherCategory] = useState("");
+	const [otherCategories, setOtherCategories] = useState<string[]>([]);
+	const [otherDraft, setOtherDraft] = useState("");
 
 	const [propertyGroup, setPropertyGroup] = useState("");
 	const [propertyType, setPropertyType] = useState("");
@@ -156,9 +151,9 @@ export default function Requirement() {
 	);
 
 	const [description, setDescription] = useState("");
-	const [address, setAddress] = useState("");
-	// Structured parts from the last autocomplete selection; cleared on manual edit.
-	const [addressMeta, setAddressMeta] = useState<AddressResult | null>(null);
+	// Preferred localities (resolved Places picks). Buy-property allows up to 5;
+	// every other track keeps a single one. localities[0] is the primary address.
+	const [localities, setLocalities] = useState<AddressResult[]>([]);
 	const [price, setPrice] = useState("");
 	const [priceUnsure, setPriceUnsure] = useState(false);
 
@@ -181,6 +176,8 @@ export default function Requirement() {
 	const [firstName, setFirstName] = useState("");
 	const [lastName, setLastName] = useState("");
 	const [phoneError, setPhoneError] = useState<string | null>(null);
+	// Live "already registered?" result for the guest phone field (debounced).
+	const [phoneTaken, setPhoneTaken] = useState(false);
 	const [nameError, setNameError] = useState<string | null>(null);
 	const [otpOpen, setOtpOpen] = useState(false);
 	const [verificationId, setVerificationId] = useState("");
@@ -192,7 +189,10 @@ export default function Requirement() {
 	const [termsError, setTermsError] = useState<string | null>(null);
 
 	// Attachments apply only to "sell" property/material requirements.
-	const showAttachment = type !== "professional" && intent === "sell";
+	const showAttachment = !!type && type !== "professional" && intent === "sell";
+	// Buy-property collects up to 5 preferred localities; every other track keeps one.
+	const isBuyProperty = type === "property" && intent === "buy";
+	const maxLocalities = isBuyProperty ? 5 : 1;
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -220,6 +220,34 @@ export default function Requirement() {
 		setFileError(null);
 	}, [showAttachment]);
 
+	// When the track no longer allows multiple localities, keep only the first.
+	useEffect(() => {
+		setLocalities((prev) =>
+			prev.length > maxLocalities ? prev.slice(0, maxLocalities) : prev,
+		);
+	}, [maxLocalities]);
+
+	// Live "is this phone already registered?" check for the guest form
+	// (debounced), so an inline "Log in instead" shows before submit.
+	useEffect(() => {
+		if (isAuthed || phone.length !== PHONE_DIGITS) {
+			setPhoneTaken(false);
+			return;
+		}
+		let active = true;
+		const timer = setTimeout(() => {
+			isPhoneAvailable(phone)
+				.then((available) => {
+					if (active) setPhoneTaken(!available);
+				})
+				.catch(() => {});
+		}, 500);
+		return () => {
+			active = false;
+			clearTimeout(timer);
+		};
+	}, [phone, isAuthed]);
+
 	function chooseType(next: RequirementType) {
 		setType(next);
 		setCategoryError(null);
@@ -228,19 +256,11 @@ export default function Requirement() {
 		setProCats([]);
 		setMaterialCats([]);
 		setOtherActive(false);
-		setOtherCategory("");
+		setOtherCategories([]);
+		setOtherDraft("");
 		setPropertyGroup("");
 		setPropertyType("");
 		setPlaceName("");
-	}
-
-	/** Switch hire↔available; clears the professional picks + "Other" buffer. */
-	function chooseProIntent(next: ProIntent) {
-		setProIntent(next);
-		setCategoryError(null);
-		setProCats([]);
-		setOtherActive(false);
-		setOtherCategory("");
 	}
 
 	function onFilesChange(event: ChangeEvent<HTMLInputElement>) {
@@ -349,20 +369,27 @@ export default function Requirement() {
 		const names = ids
 			.map((id) => options.find((option) => option.id === id)?.value)
 			.filter((value): value is string => Boolean(value));
-		if (otherActive && otherCategory.trim()) names.push(otherCategory.trim());
+		if (otherActive) {
+			// Include committed "Other" entries plus any un-committed draft.
+			const extras = [...otherCategories];
+			const draft = otherDraft.trim();
+			if (draft && !extras.some((e) => e.toLowerCase() === draft.toLowerCase()))
+				extras.push(draft);
+			names.push(...extras);
+		}
 		return names;
 	}
 
 	function resetForm() {
 		setDescription("");
-		setAddress("");
-		setAddressMeta(null);
+		setLocalities([]);
 		setPrice("");
 		setPriceUnsure(false);
 		setProCats([]);
 		setMaterialCats([]);
 		setOtherActive(false);
-		setOtherCategory("");
+		setOtherCategories([]);
+		setOtherDraft("");
 		setPropertyGroup("");
 		setPropertyType("");
 		setPlaceName("");
@@ -370,15 +397,30 @@ export default function Requirement() {
 		setAttachments([]);
 	}
 
-	// Which member type a guest is registered as, derived from the requirement — a
-	// "sell material" post makes them a supplier, an "available for work"
-	// professional post a professional, everything else a plain person (like web).
-	const signupUserType: RegisterInput["userType"] =
-		type === "material" && intent === "sell"
-			? "supplier"
-			: type === "professional" && proIntent === "available"
-				? "professional"
-				: "person";
+	// Which member type a guest is registered as, derived from the requirement —
+	// a "sell material" post makes them a supplier; every other track (including
+	// hiring a professional) stays a plain person (mirrors the web).
+	const signupUserType: SignupDraft["userType"] =
+		type === "material" && intent === "sell" ? "supplier" : "person";
+
+	/** Guest signup profile draft sent WITH the OTP request (and on resend). */
+	function buildGuestDraft(): SignupDraft {
+		return {
+			userType: signupUserType,
+			firstName: firstName.trim() || undefined,
+			lastName: lastName.trim() || undefined,
+			acceptedTerms,
+			address: localities[0]?.address || undefined,
+			locality: localities[0]?.locality || undefined,
+			city: localities[0]?.city || undefined,
+			state: localities[0]?.state || undefined,
+			pincode: localities[0]?.pincode || undefined,
+			latitude: localities[0]?.latitude || undefined,
+			longitude: localities[0]?.longitude || undefined,
+			supplierProductIds:
+				signupUserType === "supplier" ? materialCats : undefined,
+		};
+	}
 
 	/** Validate the shared requirement fields; returns the id of the first
 	 *  invalid field (for scroll-to-error) or null when everything is valid. */
@@ -387,7 +429,10 @@ export default function Requirement() {
 		const fail = (id: string) => {
 			if (!firstError) firstError = id;
 		};
-		if (type === "professional" || type === "material") {
+		if (!type) {
+			setCategoryError(null);
+			fail("req-type");
+		} else if (type === "professional" || type === "material") {
 			if (selectedCategoryNames().length === 0) {
 				setCategoryError(
 					type === "professional"
@@ -409,8 +454,8 @@ export default function Requirement() {
 			);
 			fail("req-description");
 		}
-		if (!(addressMeta?.address || address).trim()) {
-			setAddressError("Please add your location.");
+		if (localities.length === 0) {
+			setAddressError("Please select your location from the suggestions.");
 			fail("req-address");
 		}
 		return firstError;
@@ -419,6 +464,7 @@ export default function Requirement() {
 	/** Upload attachments and create the lead — for a logged-in post, or right
 	 *  after a guest signs up via OTP. */
 	async function postRequirement() {
+		if (!type) return;
 		setSubmitting(true);
 		try {
 			let imageUrl: string | undefined;
@@ -438,28 +484,29 @@ export default function Requirement() {
 			await createRequirement({
 				type,
 				intent: type === "professional" ? undefined : intent,
-				proIntent: type === "professional" ? proIntent : undefined,
+				proIntent: type === "professional" ? "hire" : undefined,
 				categories: type === "property" ? undefined : selectedCategoryNames(),
 				propertyGroup: type === "property" ? propertyGroup : undefined,
 				propertyType: type === "property" ? propertyType : undefined,
 				placeName:
 					type === "property" && intent === "sell" ? placeName : undefined,
 				description,
-				address: addressMeta?.address || address,
-				locality: addressMeta?.locality,
-				city: addressMeta?.city,
-				state: addressMeta?.state,
-				pincode: addressMeta?.pincode,
-				latitude: addressMeta?.latitude,
-				longitude: addressMeta?.longitude,
+				address: localities[0]?.address,
+				locality: localities[0]?.locality,
+				city: localities[0]?.city,
+				state: localities[0]?.state,
+				pincode: localities[0]?.pincode,
+				latitude: localities[0]?.latitude,
+				longitude: localities[0]?.longitude,
+				localities: isBuyProperty ? localities : undefined,
 				price: priceUnsure ? "" : price,
 				imageUrl,
 			});
 			// Success is toasted centrally (leads.requirementSubmitted).
 			resetForm();
-			// Show the user their own leads after posting (mirrors the web, which
-			// lands on the "My Leads" view); mobile surfaces them on the profile.
-			router.push(ROUTES.profile, "root");
+			// Land on the profile's My Leads tab (mirrors the web's post-submit
+			// "My Leads" view) so the user sees the requirement they just posted.
+			router.push(`${ROUTES.profile}?tab=myLeads`, "root");
 		} catch {
 			// createRequirement failures are toasted centrally; nothing to add.
 		} finally {
@@ -511,7 +558,7 @@ export default function Requirement() {
 				openLogin({ phone });
 				return;
 			}
-			const otp = await requestOtp(phone);
+			const otp = await requestOtp(phone, buildGuestDraft());
 			setVerificationId(otp.verificationId);
 			setResendAfter(otp.resendAfter);
 			setOtpError(null);
@@ -528,26 +575,8 @@ export default function Requirement() {
 		setVerifying(true);
 		setOtpError(null);
 		try {
-			const result = await otpRegister({
-				phone,
-				code,
-				verificationId,
-				userType: signupUserType,
-				firstName: firstName.trim() || undefined,
-				lastName: lastName.trim() || undefined,
-				acceptedTerms,
-				address: addressMeta?.address || address.trim() || undefined,
-				locality: addressMeta?.locality || undefined,
-				city: addressMeta?.city || undefined,
-				state: addressMeta?.state || undefined,
-				pincode: addressMeta?.pincode || undefined,
-				latitude: addressMeta?.latitude || undefined,
-				longitude: addressMeta?.longitude || undefined,
-				professionalCategoryId:
-					signupUserType === "professional" ? proCats[0] : undefined,
-				supplierProductIds:
-					signupUserType === "supplier" ? materialCats : undefined,
-			});
+			// Profile was captured with the OTP request; verify sends only the code.
+			const result = await otpRegister({ phone, code, verificationId });
 			storeSession(result);
 			setOtpOpen(false);
 			await postRequirement();
@@ -561,34 +590,50 @@ export default function Requirement() {
 	}
 
 	async function resendGuestOtp(): Promise<number> {
-		const otp = await requestOtp(phone);
+		const otp = await requestOtp(phone, buildGuestDraft());
 		setVerificationId(otp.verificationId);
 		return otp.resendAfter;
 	}
 
 	const categoryPrompt =
 		type === "professional"
-			? proIntent === "available"
-				? "Select what best describes your profession?"
-				: "Which professionals do you need?"
+			? "Which professionals do you need?"
 			: intent === "sell"
 				? "Which materials do you sell?"
 				: "Which materials do you need?";
 
-	// The "Available for work" professional flow is a single-select fixed set —
-	// the "Other" free-text option is hidden there (mirrors the web).
-	const showOther = !(type === "professional" && proIntent === "available");
 	const hasCategorySelection =
 		(type === "material" ? materialCats : proCats).length > 0 ||
-		(otherActive && otherCategory.trim().length > 0);
+		(otherActive &&
+			(otherCategories.length > 0 || otherDraft.trim().length > 0));
 
 	/** Clear all selected categories + the "Other" buffer (professional/material). */
 	function clearCategories() {
 		if (type === "material") setMaterialCats([]);
 		else setProCats([]);
 		setOtherActive(false);
-		setOtherCategory("");
+		setOtherCategories([]);
+		setOtherDraft("");
 		setCategoryError(null);
+	}
+
+	/** Commit comma-separated "Other" entries (deduped, case-insensitive). */
+	function commitOther(raw: string) {
+		const parts = raw
+			.split(",")
+			.map((p) => p.trim())
+			.filter(Boolean);
+		if (parts.length === 0) return;
+		setOtherCategories((prev) => {
+			const next = [...prev];
+			for (const p of parts) {
+				if (!next.some((e) => e.toLowerCase() === p.toLowerCase()))
+					next.push(p);
+			}
+			return next;
+		});
+		setOtherDraft("");
+		if (categoryError) setCategoryError(null);
 	}
 
 	const intentToggle = (
@@ -619,7 +664,10 @@ export default function Requirement() {
 			aria-pressed={otherActive}
 			onClick={() => {
 				setOtherActive((v) => !v);
-				if (otherActive) setOtherCategory("");
+				if (otherActive) {
+					setOtherCategories([]);
+					setOtherDraft("");
+				}
 				if (categoryError) setCategoryError(null);
 			}}
 			className={`${CHIP} ${otherActive ? CHIP_ON : CHIP_OFF}`}
@@ -629,16 +677,63 @@ export default function Requirement() {
 	);
 	const otherField = otherActive ? (
 		<div className="mt-2">
-			<TextField
-				value={otherCategory}
-				onChange={setOtherCategory}
+			{otherCategories.length ? (
+				<div className="mb-2 flex flex-wrap gap-2">
+					{otherCategories.map((c) => (
+						<span
+							key={c}
+							className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-[#f5f7fb] py-1 pl-3 pr-1.5 text-[11px] font-semibold text-primary"
+						>
+							{c}
+							<button
+								type="button"
+								onClick={() =>
+									setOtherCategories((prev) => prev.filter((x) => x !== c))
+								}
+								aria-label={`Remove ${c}`}
+								className="grid h-4 w-4 place-items-center rounded-full bg-primary/15 text-primary"
+							>
+								<IonIcon icon={ICONS.close} className="text-[10px]" />
+							</button>
+						</span>
+					))}
+				</div>
+			) : null}
+			<input
+				type="text"
+				value={otherDraft}
+				onChange={(event) => {
+					const v = event.target.value;
+					if (v.includes(",")) commitOther(v);
+					else {
+						setOtherDraft(v);
+						if (categoryError) setCategoryError(null);
+					}
+				}}
+				onKeyDown={(event) => {
+					if (event.key === "Enter") {
+						event.preventDefault();
+						commitOther(otherDraft);
+					} else if (
+						event.key === "Backspace" &&
+						!otherDraft &&
+						otherCategories.length
+					) {
+						setOtherCategories((prev) => prev.slice(0, -1));
+					}
+				}}
+				onBlur={() => commitOther(otherDraft)}
 				placeholder={
 					type === "material"
 						? "eg: wood, brick, sand"
 						: "eg: carpenter, plumber, electrician"
 				}
 				autoCapitalize="words"
+				className="w-full rounded-[9px] border border-[#dae3ef] bg-white px-3.5 py-2.5 font-sans text-[12px] text-ink outline-none placeholder:font-medium placeholder:text-[#c4c7cc] focus:border-primary"
 			/>
+			<p className="mt-1 text-[10px] text-muted-light">
+				Press Enter or comma to add each one.
+			</p>
 		</div>
 	) : null;
 
@@ -684,6 +779,18 @@ export default function Requirement() {
 										error={phoneError}
 									/>
 								</div>
+								{phoneTaken ? (
+									<p className="-mt-1 text-[11px] text-danger">
+										This number is already registered.{" "}
+										<button
+											type="button"
+											onClick={() => openLogin({ phone })}
+											className="font-semibold underline"
+										>
+											Log in instead
+										</button>
+									</p>
+								) : null}
 								<div className="grid grid-cols-2 gap-3">
 									<div id="req-name">
 										<span className="mb-1.5 block text-[12px] font-bold text-ink">
@@ -717,7 +824,7 @@ export default function Requirement() {
 					) : null}
 
 					<section className={`p-4 ${CARD}`}>
-						<p className="m-0 text-[12px] font-bold text-ink">
+						<p id="req-type" className="m-0 text-[12px] font-bold text-ink">
 							Choose the option that best matches your requirement.
 						</p>
 
@@ -760,7 +867,11 @@ export default function Requirement() {
 						</div>
 
 						<div className="mt-4" id="req-category">
-							{type === "property" ? (
+							{!type ? (
+								<p className="text-[11px] text-muted-light">
+									Select an option above to continue.
+								</p>
+							) : type === "property" ? (
 								<>
 									<span className="mb-2 block text-[12px] font-bold text-ink">
 										Are you buying or selling?
@@ -863,28 +974,7 @@ export default function Requirement() {
 											</span>
 											{intentToggle}
 										</>
-									) : (
-										<>
-											<span className="mb-2 block text-[12px] font-bold text-ink">
-												Are you hiring, or offering your services?
-											</span>
-											<div className="mb-3 flex flex-wrap gap-2">
-												{PRO_INTENTS.map((option) => (
-													<button
-														key={option.value}
-														type="button"
-														aria-pressed={proIntent === option.value}
-														onClick={() => chooseProIntent(option.value)}
-														className={`${CHIP} ${
-															proIntent === option.value ? CHIP_ON : CHIP_OFF
-														}`}
-													>
-														{option.label}
-													</button>
-												))}
-											</div>
-										</>
-									)}
+									) : null}
 
 									<div className="mb-2 flex items-baseline gap-2">
 										{/* Figma: Bold 10px, #000 */}
@@ -893,7 +983,7 @@ export default function Requirement() {
 										</span>
 										{/* Figma: Regular 8px, #6C6F7B */}
 										<span className="text-[10px] font-normal text-[#6c6f7b]">
-											{showOther ? "select one or more" : "select one"}
+											select one or more
 										</span>
 										{hasCategorySelection ? (
 											<button
@@ -909,18 +999,15 @@ export default function Requirement() {
 									<CategoryChips
 										options={type === "material" ? materialOptions : proOptions}
 										selected={type === "material" ? materialCats : proCats}
-										single={
-											type === "professional" && proIntent === "available"
-										}
 										error={categoryError}
-										trailing={showOther ? otherChip : undefined}
+										trailing={otherChip}
 										onChange={(ids) => {
 											if (type === "material") setMaterialCats(ids);
 											else setProCats(ids);
 											if (categoryError) setCategoryError(null);
 										}}
 									/>
-									{showOther ? otherField : null}
+									{otherField}
 								</>
 							)}
 
@@ -1022,28 +1109,20 @@ export default function Requirement() {
 							id="req-address"
 							className="mb-1.5 mt-4 block text-[12px] font-bold text-ink"
 						>
-							Address
+							{isBuyProperty ? "Preferred localities" : "Address"}
 						</span>
-						<AddressAutocomplete
-							value={address}
-							ariaLabel="Address"
-							placeholder="Search your address"
-							enableCurrentLocation
-							onChange={(value) => {
-								setAddress(value);
-								// Editing by hand invalidates the last resolved selection.
-								setAddressMeta(null);
-								if (addressError) setAddressError(null);
-							}}
-							onSelect={(result) => {
-								setAddress(result.full);
-								setAddressMeta(result);
-								if (addressError) setAddressError(null);
-							}}
-						/>
-						{addressError ? (
-							<p className="mt-1.5 text-[11px] text-danger">{addressError}</p>
+						{isBuyProperty ? (
+							<p className="mb-1.5 -mt-0.5 text-[10px] text-muted-light">
+								Add up to 5 localities within 50 km of the first.
+							</p>
 						) : null}
+						<LocalityPicker
+							value={localities}
+							onChange={setLocalities}
+							max={maxLocalities}
+							error={addressError}
+							onErrorClear={() => setAddressError(null)}
+						/>
 
 						<span className="mb-1.5 mt-4 block text-[12px] font-bold text-ink">
 							Estimated price

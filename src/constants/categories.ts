@@ -1,9 +1,18 @@
+import { ICONS } from "@/theme/icons";
 import type { DirectoryCategoryId, LeadCategoryId } from "@/types";
 
 export interface Tab<T extends string> {
 	id: T;
 	label: string;
 }
+
+/** Per-track avatar placeholder icon shown when a listing has no photo (the app
+ *  ships no placeholder images, so we use the track's requirement glyph). */
+export const CATEGORY_PLACEHOLDER_ICON: Record<DirectoryCategoryId, string> = {
+	professionals: ICONS.reqProfessionals,
+	"property-dealers": ICONS.reqProperty,
+	"material-suppliers": ICONS.reqMaterial,
+};
 
 /** Tabs on the Professionals directory (labels match the design). */
 export const DIRECTORY_TABS: Tab<DirectoryCategoryId>[] = [

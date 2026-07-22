@@ -58,26 +58,28 @@ export function checkPhone(phone: string): Promise<{ exists: boolean }> {
 }
 
 /**
- * Send an OTP to a phone. Returns `verificationId` (bound to the phone for the
- * verify step) and `resendAfter` — seconds until a fresh code can be requested.
+ * Debounced signup check: `true` when the phone is free (no VERIFIED account
+ * owns it). Uses the public `phone-available` endpoint the web uses; never
+ * blocks — a check failure resolves to `true` so the user can still proceed.
  */
-export function requestOtp(
-	phone: string,
-): Promise<{ verificationId: string; resendAfter: number }> {
-	return apiPost<{ verificationId: string; resendAfter: number }>(
-		"/app/auth/otp/request",
-		{ phone },
-	);
+export async function isPhoneAvailable(phone: string): Promise<boolean> {
+	try {
+		const res = await apiGet<{ available: boolean }>(
+			`/app/auth/phone-available?phone=${encodeURIComponent(phone)}`,
+		);
+		return res.available !== false;
+	} catch {
+		return true;
+	}
 }
 
-interface VerifyInput {
-	phone: string;
-	code: string;
-	verificationId: string;
-}
-
-/** Signup payload: the verification fields plus the profile the form collects. */
-export interface RegisterInput extends VerifyInput {
+/**
+ * Signup profile draft sent WITH the OTP request. The API stores it in
+ * `signup_requests` (keyed by phone) and `otp/register` reads it back to build
+ * the account — so the profile lives HERE, not on the verify call. Login sends
+ * no draft (phone only).
+ */
+export interface SignupDraft {
 	userType?: string;
 	firstName?: string;
 	lastName?: string;
@@ -96,17 +98,40 @@ export interface RegisterInput extends VerifyInput {
 	supplierProductIds?: number[];
 }
 
+/**
+ * Send an OTP to a phone. For signup, pass the collected `draft` — the API SMSes
+ * the code AND upserts the draft (by phone) so `otp/register` can build the
+ * account from it. Returns `verificationId` (bound to the phone for verify) and
+ * `resendAfter` — seconds until a fresh code can be requested.
+ */
+export function requestOtp(
+	phone: string,
+	draft?: SignupDraft,
+): Promise<{ verificationId: string; resendAfter: number }> {
+	return apiPost<{ verificationId: string; resendAfter: number }>(
+		"/app/auth/otp/request",
+		{ phone, ...(draft ?? {}) },
+	);
+}
+
+interface VerifyInput {
+	phone: string;
+	code: string;
+	verificationId: string;
+}
+
 /** OTP login (existing users only) — verify the code and return a session. */
 export function otpLogin(input: VerifyInput): Promise<LoginResult> {
 	return apiPost<LoginResult>("/app/auth/otp/login", input);
 }
 
 /**
- * OTP signup (new phones) — verify the code, create a passwordless account with
- * the collected profile (name, address parts, role category), and return a
- * session.
+ * OTP signup (new phones) — verify the code and return a session. The profile
+ * (name/address/role) was captured WITH the OTP request (see {@link requestOtp}
+ * + {@link SignupDraft}) and the account is built from that stored draft, so
+ * ONLY the verification fields are sent here.
  */
-export function otpRegister(input: RegisterInput): Promise<LoginResult> {
+export function otpRegister(input: VerifyInput): Promise<LoginResult> {
 	return apiPost<LoginResult>("/app/auth/otp/register", input);
 }
 

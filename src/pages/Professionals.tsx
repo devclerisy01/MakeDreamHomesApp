@@ -37,6 +37,7 @@ import {
 	getProfessionalCategories,
 } from "@/lib/api/misc";
 import {
+	type BrandFacet,
 	fetchDirectoryFilters,
 	fetchProfessionals,
 	type LocationFacet,
@@ -52,17 +53,6 @@ import type { DirectoryCategoryId } from "@/types";
 const SORT_LATEST = { value: "latest", label: "Latest" };
 const SORT_NEAREST = { value: "nearest", label: "Nearest" };
 const SORT_TOP_RATED = { value: "topRated", label: "Top Rated" };
-
-const RATINGS_GROUP: FilterGroup = {
-	key: "flags",
-	label: "Ratings",
-	header: "Ratings & Portfolio",
-	multi: true,
-	options: [
-		{ value: "hasReviews", label: "Has Reviews" },
-		{ value: "hasPortfolio", label: "Has Portfolio" },
-	],
-};
 
 /** The track's "Type" left-label (professionals/suppliers only). */
 const TYPE_LABEL: Partial<Record<DirectoryCategoryId, string>> = {
@@ -107,6 +97,7 @@ export default function Professionals() {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [categories, setCategories] = useState<CategoryOption[]>([]);
 	const [locations, setLocations] = useState<LocationFacet[]>([]);
+	const [brands, setBrands] = useState<BrandFacet[]>([]);
 
 	// Track switch preserves a still-valid sort (matches web, which carries
 	// `search` + `sort` forward); the per-track type facet, rating flags and
@@ -127,6 +118,7 @@ export default function Professionals() {
 	const sort = selection.sort?.[0];
 	const places = useMemo(() => placesOf(selection), [selection]);
 	const flags = useMemo(() => selection.flags ?? [], [selection]);
+	const brandSel = useMemo(() => selection.brand ?? [], [selection]);
 	const activeFilterCount = useMemo(
 		() => Object.values(selection).reduce((n, v) => n + v.length, 0),
 		[selection],
@@ -161,7 +153,10 @@ export default function Professionals() {
 			},
 			controller.signal,
 		)
-			.then(setLocations)
+			.then((res) => {
+				setLocations(res.locations);
+				setBrands(res.brands);
+			})
 			.catch(() => {});
 		return () => controller.abort();
 	}, [filtersOpen, category, search, typeId, flags, location]);
@@ -192,7 +187,34 @@ export default function Professionals() {
 				})),
 			});
 		}
-		list.push(RATINGS_GROUP);
+		const isSupplier = category === "material-suppliers";
+		list.push({
+			key: "flags",
+			label: "Ratings",
+			header: isSupplier ? "Ratings & Products" : "Ratings & Portfolio",
+			multi: true,
+			options: [
+				{ value: "hasReviews", label: "Has Reviews" },
+				{
+					value: "hasPortfolio",
+					label: isSupplier ? "Has Products Available" : "Has Portfolio",
+				},
+			],
+		});
+		// Brand facet — suppliers only (the API returns brands for that track).
+		if (isSupplier && brands.length) {
+			list.push({
+				key: "brand",
+				label: "Brands",
+				header: "Select Brand",
+				multi: true,
+				options: brands.map((b) => ({
+					value: b.value,
+					label: b.label,
+					count: b.count,
+				})),
+			});
+		}
 		for (const loc of locations) {
 			list.push({
 				key: `city:${loc.id}`,
@@ -207,7 +229,7 @@ export default function Professionals() {
 			});
 		}
 		return list;
-	}, [category, categories, locations, location]);
+	}, [category, categories, locations, brands, location]);
 
 	const fetcher = useCallback(
 		(page: number, signal: AbortSignal) =>
@@ -225,11 +247,12 @@ export default function Professionals() {
 					places,
 					hasReviews: flags.includes("hasReviews"),
 					hasPortfolio: flags.includes("hasPortfolio"),
+					brands: brandSel,
 					...locationToGeo(location),
 				},
 				signal,
 			),
-		[category, search, sort, typeId, places, flags, location],
+		[category, search, sort, typeId, places, flags, brandSel, location],
 	);
 	const { items, status, hasMore, loadMore, reload } = usePagedList(
 		fetcher,
@@ -262,6 +285,8 @@ export default function Professionals() {
 								key={urlSearch}
 								defaultValue={urlSearch}
 								onSearch={setSearch}
+								showNearMe
+								placeholder="Search professionals, dealers & suppliers"
 							/>
 							<div className="mt-3">
 								<CategoryTabs

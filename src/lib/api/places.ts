@@ -28,13 +28,34 @@ export interface AddressResult {
 	longitude: string;
 }
 
-/** Address predictions for `input` (India), grouped under `sessionToken`. */
+/** Coordinates to bias/restrict autocomplete predictions toward. */
+export interface PlaceBias {
+	latitude: string;
+	longitude: string;
+}
+
+/**
+ * Address predictions for `input` (India), grouped under `sessionToken`.
+ * Optional: `bias` softly steers predictions toward those coords; `restrict`
+ * hard-limits them to the ~50 km circle around `bias` (keeps extra localities
+ * near the first pick); `regionsOnly` returns geographic areas only
+ * (localities/sublocalities/admin areas), hiding businesses/POIs.
+ */
 export async function placeAutocomplete(
 	input: string,
 	sessionToken: string,
+	bias?: PlaceBias | null,
+	restrict?: boolean,
+	regionsOnly?: boolean,
 ): Promise<PlacePrediction[]> {
 	try {
 		const params = new URLSearchParams({ input, sessionToken });
+		if (bias?.latitude && bias?.longitude) {
+			params.set("biasLat", bias.latitude);
+			params.set("biasLng", bias.longitude);
+			if (restrict) params.set("restrict", "true");
+		}
+		if (regionsOnly) params.set("regionsOnly", "true");
 		return (
 			(await apiGet<PlacePrediction[]>(
 				`/app/places/autocomplete?${params.toString()}`,

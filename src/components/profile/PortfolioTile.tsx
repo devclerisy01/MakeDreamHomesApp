@@ -13,6 +13,7 @@ import type { PortfolioItem } from "@/types";
 export function PortfolioTile({
 	item,
 	pending = false,
+	photoCount = 0,
 	onEdit,
 	onDelete,
 	onOpen,
@@ -20,6 +21,8 @@ export function PortfolioTile({
 	item: PortfolioItem;
 	/** Badge the tile when the entry is still awaiting moderation. */
 	pending?: boolean;
+	/** Total photos in the entry — shows a "+N" badge for the extras beyond the cover. */
+	photoCount?: number;
 	/** Owner-only: open the edit sheet for this entry. */
 	onEdit?: () => void;
 	/** Owner-only: delete this entry (with confirm). */
@@ -29,6 +32,7 @@ export function PortfolioTile({
 }) {
 	const src = getImageSrc(item);
 	const place = item.city || item.location;
+	const extra = photoCount > 1 ? photoCount - 1 : 0;
 	return (
 		<div
 			className={`relative aspect-[4/3] overflow-hidden rounded-2xl bg-surface-muted ${
@@ -78,6 +82,11 @@ export function PortfolioTile({
 						</button>
 					) : null}
 				</div>
+			) : null}
+			{extra > 0 ? (
+				<span className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
+					<IonIcon icon={ICONS.image} className="text-[11px]" />+{extra}
+				</span>
 			) : null}
 			<div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/100 via-black/30 to-transparent px-3 pb-3 pt-10">
 				{item.title ? (

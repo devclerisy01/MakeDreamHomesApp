@@ -7,6 +7,8 @@ interface TextFieldProps {
 	multiline?: boolean;
 	rows?: number;
 	autoCapitalize?: "none" | "words" | "sentences";
+	/** Virtual-keyboard hint for single-line inputs (e.g. "numeric" for price). */
+	inputMode?: "text" | "numeric" | "decimal" | "tel";
 	disabled?: boolean;
 	error?: string | null;
 }
@@ -23,6 +25,7 @@ export function TextField({
 	multiline = false,
 	rows = 4,
 	autoCapitalize = "sentences",
+	inputMode,
 	disabled,
 	error,
 }: TextFieldProps) {
@@ -48,6 +51,7 @@ export function TextField({
 					placeholder={placeholder}
 					aria-label={ariaLabel ?? placeholder}
 					autoCapitalize={autoCapitalize}
+					inputMode={inputMode}
 					disabled={disabled}
 					onChange={(event) => onChange(event.target.value)}
 				/>

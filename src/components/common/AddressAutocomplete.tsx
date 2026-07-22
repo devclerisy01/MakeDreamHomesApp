@@ -1,17 +1,18 @@
 import { IonIcon, IonSpinner } from "@ionic/react";
 import { locateOutline, locationOutline } from "ionicons/icons";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
 
 import { UI_MESSAGES } from "@/constants/messages";
 import {
 	type AddressResult,
+	type PlaceBias,
 	placeAutocomplete,
 	placeDetails,
 	placeReverseGeocode,
 	type PlacePrediction,
 } from "@/lib/api/places";
-import { getCurrentCoords } from "@/lib/native/geolocation";
 import { toastInfo } from "@/lib/api/toast";
+import { getCurrentCoords } from "@/lib/native/geolocation";
 
 interface AddressAutocompleteProps {
 	value: string;
@@ -22,10 +23,18 @@ interface AddressAutocompleteProps {
 	error?: string | null;
 	/** Show a button that fills the field from the device's current location. */
 	enableCurrentLocation?: boolean;
+	/** Softly bias predictions toward these coords (e.g. the first locality). */
+	biasLocation?: PlaceBias | null;
+	/** Hard-restrict predictions to the bias circle (~50 km) instead of a soft bias. */
+	restrictToBias?: boolean;
+	/** Restrict predictions to geographic regions (localities/areas), hiding POIs. */
+	regionsOnly?: boolean;
+	/** Disable typing/search (e.g. once the locality cap is reached). */
+	disabled?: boolean;
 }
 
 const FIELD =
-	"w-full rounded-xl border bg-white px-3.5 py-3 font-sans text-[12px] text-ink outline-none transition-colors placeholder:text-muted-light focus:border-primary";
+	"w-full rounded-xl border bg-white px-3.5 py-3 font-sans text-[12px] text-ink outline-none transition-colors placeholder:text-muted-light focus:border-primary disabled:opacity-60";
 
 /** A v4 UUID when available, else a random hex string, else a timestamp — only
  *  groups Places billing sessions, so uniqueness isn't security-critical. */
@@ -45,7 +54,9 @@ function newSessionToken(): string {
  * proxy (`/app/places/*`) — mirrors the web `AddressAutocomplete`. Typing fetches
  * predictions; picking one resolves it to a structured {@link AddressResult}
  * through `onSelect`. A per-session token groups the autocomplete + details call
- * for billing.
+ * for billing. Optional bias/restrict/regionsOnly narrow predictions (used by the
+ * locality picker); `autoComplete="off"` + a neutral field name suppress the
+ * WebView's saved-address autofill.
  */
 export function AddressAutocomplete({
 	value,
@@ -55,7 +66,12 @@ export function AddressAutocomplete({
 	ariaLabel,
 	error,
 	enableCurrentLocation = false,
+	biasLocation,
+	restrictToBias = false,
+	regionsOnly = false,
+	disabled = false,
 }: AddressAutocompleteProps) {
+	const autofillName = `nofill-${useId()}`;
 	const [suggestions, setSuggestions] = useState<PlacePrediction[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [locating, setLocating] = useState(false);
@@ -97,7 +113,13 @@ export function AddressAutocomplete({
 			const reqId = ++requestIdRef.current;
 			setLoading(true);
 			setOpen(true);
-			const results = await placeAutocomplete(query, sessionTokenRef.current);
+			const results = await placeAutocomplete(
+				query,
+				sessionTokenRef.current,
+				biasLocation,
+				restrictToBias,
+				regionsOnly,
+			);
 			if (reqId !== requestIdRef.current) return; // superseded
 			setSuggestions(results);
 			setLoading(false);
@@ -161,7 +183,10 @@ export function AddressAutocomplete({
 			<div className="relative">
 				<input
 					type="text"
+					name={autofillName}
+					autoComplete="off"
 					value={value}
+					disabled={disabled}
 					placeholder={placeholder}
 					aria-label={ariaLabel ?? placeholder}
 					autoCapitalize="words"
@@ -184,7 +209,7 @@ export function AddressAutocomplete({
 					<button
 						type="button"
 						onClick={handleUseCurrentLocation}
-						disabled={locating}
+						disabled={locating || disabled}
 						aria-label="Use my current location"
 						className="absolute right-1 top-0 grid h-full w-9 place-items-center text-muted-light active:text-primary disabled:opacity-60"
 					>

@@ -4,16 +4,27 @@ import {
 	IonPage,
 	IonRefresher,
 	IonRefresherContent,
+	IonSpinner,
 	useIonAlert,
 	useIonRouter,
+	useIonViewWillEnter,
 } from "@ionic/react";
 import {
 	addOutline,
+	callOutline,
+	checkmarkOutline,
 	locationOutline,
 	mailOutline,
 	personCircleOutline,
+	trashOutline,
 } from "ionicons/icons";
-import { useCallback, useEffect, useState } from "react";
+import {
+	type ChangeEvent,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
 import { ReviewsList } from "@/components/cards/ReviewsList";
@@ -21,42 +32,43 @@ import { ConversationList } from "@/components/chat/ConversationList";
 import { Avatar } from "@/components/common/Avatar";
 import { Lightbox, type LightboxImage } from "@/components/common/Lightbox";
 import { ReadMoreText } from "@/components/common/ReadMoreText";
-import {
-	PortfolioGridSkeleton,
-	SkeletonList,
-} from "@/components/common/Skeletons";
+import { PortfolioGridSkeleton } from "@/components/common/Skeletons";
+import { Stars } from "@/components/common/Stars";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
+import { AboutModal } from "@/components/profile/AboutModal";
 import { AddPortfolioModal } from "@/components/profile/AddPortfolioModal";
+import { AddressModal } from "@/components/profile/AddressModal";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
-import { MyLeadCard } from "@/components/profile/MyLeadCard";
+import { ImageCropperModal } from "@/components/profile/ImageCropperModal";
+import { MyLeadsPanel } from "@/components/profile/MyLeadsPanel";
 import { PortfolioTile } from "@/components/profile/PortfolioTile";
 import { SavedList } from "@/components/profile/SavedList";
+import { SupplierCatalogSection } from "@/components/profile/SupplierCatalogSection";
 import { UI_MESSAGES } from "@/constants/messages";
 import {
 	encodeProfessionalId,
 	publicProfileUrl,
 	ROUTES,
 } from "@/constants/routes";
-import { me } from "@/lib/api/auth";
+import { me, updateProfile, uploadProfileImage } from "@/lib/api/auth";
 import { getUnreadTotal } from "@/lib/api/chat";
-import { getMyLeads } from "@/lib/api/leads";
 import {
 	deletePortfolio,
 	getMyPortfolio,
 	type PortfolioEntry,
 } from "@/lib/api/portfolio";
 import { getProfessionalDetail } from "@/lib/api/professionals";
-import { toastInfo } from "@/lib/api/toast";
+import { toastError, toastInfo } from "@/lib/api/toast";
 import { useLogin } from "@/lib/auth/login-gate";
 import { clearSession, setStoredUser, useAuth } from "@/lib/auth/session";
 import { getImageSrc } from "@/lib/format";
 import { shareLink } from "@/lib/share";
 import { SECTION_HEAD, SECTION_TITLE, TAG } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
-import type { Lead, ProfessionalDetail } from "@/types";
+import type { ProfessionalDetail } from "@/types";
 
-type Tab = "messages" | "overview" | "savedPros" | "savedLeads";
+type Tab = "messages" | "overview" | "myLeads" | "savedPros" | "savedLeads";
 
 /** Neutral profession chip on the identity card (Figma: grey fill, hairline border). */
 const PRO_TAG = `${TAG} border-line bg-[#F2F4F7] font-semibold text-ink`;
@@ -66,10 +78,14 @@ const META_ICON_BOX =
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
 	{ id: "overview", label: "Overview", icon: ICONS.tabOverview },
+	{ id: "myLeads", label: "My Leads", icon: ICONS.tabLeads },
 	{ id: "savedPros", label: "Saved Professionals", icon: ICONS.tabSaved },
 	{ id: "savedLeads", label: "Saved Leads", icon: ICONS.tabSaved },
 	{ id: "messages", label: "Messages", icon: ICONS.message },
 ];
+
+/** Max profile-photo upload size (5 MB), matching the edit-profile sheet. */
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
 const filled = (value: string | null | undefined) => Boolean(value?.trim?.());
 
@@ -113,6 +129,45 @@ function CompletionRing({ percent }: { percent: number }) {
 	);
 }
 
+/** Compact prev/next pager (‹ x / y ›). */
+function Pager({
+	page,
+	totalPages,
+	onChange,
+}: {
+	page: number;
+	totalPages: number;
+	onChange: (page: number) => void;
+}) {
+	const btn =
+		"grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-ink disabled:opacity-40 active:bg-surface-muted";
+	return (
+		<div className="mt-4 flex items-center justify-center gap-3">
+			<button
+				type="button"
+				aria-label="Previous page"
+				disabled={page <= 1}
+				onClick={() => onChange(page - 1)}
+				className={btn}
+			>
+				<IonIcon icon={ICONS.back} className="text-lg" />
+			</button>
+			<span className="text-[13px] font-semibold text-muted">
+				{page} / {totalPages}
+			</span>
+			<button
+				type="button"
+				aria-label="Next page"
+				disabled={page >= totalPages}
+				onClick={() => onChange(page + 1)}
+				className={btn}
+			>
+				<IonIcon icon={ICONS.chevronForward} className="text-lg" />
+			</button>
+		</div>
+	);
+}
+
 export default function Profile() {
 	const router = useIonRouter();
 	const [presentAlert] = useIonAlert();
@@ -121,9 +176,9 @@ export default function Profile() {
 
 	const [tab, setTab] = useState<Tab>("overview");
 	const [detail, setDetail] = useState<ProfessionalDetail | null>(null);
-	const [myLeads, setMyLeads] = useState<Lead[] | null>(null);
 	const [myPortfolio, setMyPortfolio] = useState<PortfolioEntry[] | null>(null);
 	const [reloadKey, setReloadKey] = useState(0);
+	const [portfolioPage, setPortfolioPage] = useState(1);
 	const [editOpen, setEditOpen] = useState(false);
 	const [addPortfolioOpen, setAddPortfolioOpen] = useState(false);
 	// The portfolio entry being edited (null = the sheet is in "add" mode).
@@ -135,6 +190,29 @@ export default function Profile() {
 		images: LightboxImage[];
 		index: number;
 	} | null>(null);
+	// Hero editors: About (P32) and Address (P7) focused sheets.
+	const [aboutOpen, setAboutOpen] = useState(false);
+	const [addressOpen, setAddressOpen] = useState(false);
+	// Avatar editing (P3/P5/P6): the picked file awaiting crop, and the
+	// upload-in-progress flag that shows a spinner over the hero photo.
+	const [cropFile, setCropFile] = useState<File | null>(null);
+	const [uploadingPhoto, setUploadingPhoto] = useState(false);
+	// Briefly ring the hero photo when the checklist's photo step fires (P34).
+	const [highlightPhoto, setHighlightPhoto] = useState(false);
+	// Hidden file input for the avatar, the hero photo box (scroll target), and
+	// the reviews block (scroll target from the hero rating card, P9/P34).
+	const photoInputRef = useRef<HTMLInputElement>(null);
+	const heroPhotoRef = useRef<HTMLDivElement>(null);
+	const reviewsRef = useRef<HTMLDivElement>(null);
+
+	// Deep-link: land on a specific tab when navigated with ?tab=<id>
+	// (e.g. after posting a requirement → My Leads).
+	useIonViewWillEnter(() => {
+		const requested = new URLSearchParams(window.location.search).get("tab");
+		if (requested && TABS.some((item) => item.id === requested)) {
+			setTab(requested as Tab);
+		}
+	});
 
 	/** Confirm, then soft-delete a portfolio entry (removed from the list). */
 	function confirmDeletePortfolio(id: string) {
@@ -180,6 +258,83 @@ export default function Profile() {
 		});
 	}
 
+	/** Open the OS file picker for a new avatar. */
+	function openPhotoPicker() {
+		photoInputRef.current?.click();
+	}
+
+	/** Checklist "Upload profile picture" step (P34): scroll to the hero photo,
+	 *  briefly ring it, and open the picker (the click keeps a user gesture). */
+	function highlightPhotoBox() {
+		heroPhotoRef.current?.scrollIntoView({
+			behavior: "smooth",
+			block: "center",
+		});
+		setHighlightPhoto(true);
+		window.setTimeout(() => setHighlightPhoto(false), 2500);
+		openPhotoPicker();
+	}
+
+	/** Validate a picked image and hand it to the cropper (P3/P6). */
+	function onPhotoPick(event: ChangeEvent<HTMLInputElement>) {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+		if (!file.type.startsWith("image/")) {
+			toastInfo(UI_MESSAGES.imageOnly);
+			return;
+		}
+		if (file.size > MAX_PHOTO_SIZE) {
+			toastInfo(UI_MESSAGES.imageTooLarge);
+			return;
+		}
+		setCropFile(file);
+	}
+
+	/** Upload the cropped avatar (presign → key) and persist it (P3/P6). */
+	async function onCropped(cropped: File) {
+		setCropFile(null);
+		setUploadingPhoto(true);
+		try {
+			const key = await uploadProfileImage(cropped);
+			const updated = await updateProfile({ profilePhoto: key });
+			setStoredUser(updated);
+			setReloadKey((k) => k + 1);
+		} catch {
+			toastError(UI_MESSAGES.photoUploadFailed);
+		} finally {
+			setUploadingPhoto(false);
+		}
+	}
+
+	/** Confirm, then clear the profile photo (P5). */
+	function confirmRemovePhoto() {
+		void presentAlert({
+			header: "Remove photo?",
+			message: "Your profile picture will be removed.",
+			buttons: [
+				{ text: "Cancel", role: "cancel" },
+				{
+					text: "Remove",
+					role: "destructive",
+					handler: () => {
+						updateProfile({ profilePhoto: "" })
+							.then((updated) => {
+								setStoredUser(updated);
+								setReloadKey((k) => k + 1);
+							})
+							.catch(() => {});
+					},
+				},
+			],
+		});
+	}
+
+	/** Smooth-scroll to the Rating & Reviews block (from the hero rating card). */
+	function scrollToReviews() {
+		reviewsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+	}
+
 	const userId = user?.id;
 	const load = useCallback(
 		(signal: AbortSignal) => {
@@ -192,13 +347,6 @@ export default function Profile() {
 					if (!signal.aborted) setDetail(data);
 				})
 				.catch(() => {});
-			getMyLeads({ limit: 20 }, signal)
-				.then((res) => {
-					if (!signal.aborted) setMyLeads(res.items);
-				})
-				.catch(() => {
-					if (!signal.aborted) setMyLeads([]);
-				});
 			// The owner's own portfolio — all statuses (pending items show, badged),
 			// matching the web profile.
 			getMyPortfolio(signal)
@@ -312,47 +460,108 @@ export default function Profile() {
 			title: entry.title,
 			city: [entry.locality, entry.city].filter(Boolean).join(", "),
 			image: entry.coverImage ?? undefined,
+			photoCount: entry.media?.length ?? 0,
 			pending: entry.status === "PENDING",
 		})) ??
-		(detail?.portfolio ?? []).map((item) => ({ ...item, pending: false }));
+		(detail?.portfolio ?? []).map((item) => ({
+			...item,
+			pending: false,
+			photoCount: item.images?.length ?? 0,
+		}));
 	// Portfolio slides for the fullscreen lightbox (P14).
 	const portfolioImages: LightboxImage[] = portfolio.map((item) => ({
 		src: getImageSrc(item),
 		title: item.title ?? undefined,
 		subtitle: item.city || undefined,
 	}));
-	const leads = myLeads ?? [];
 	const hasReviews = Boolean(detail?.reviewsBreakdown && detail.reviewsCount);
 
-	// Profile-completion checklist → percentage (from the real user's fields).
-	const isBusiness = user.userType !== "person";
-	const businessDone =
-		filled(user.businessName) &&
-		(user.userType === "professional"
-			? Boolean(user.professionalUserType)
-			: user.userType === "supplier"
-				? (user.supplierProductIds?.length ?? 0) > 0
-				: true);
-	const steps: boolean[] = [
-		filled(user.firstName) && filled(user.lastName) && filled(user.gender),
-		filled(user.profilePhoto),
-		filled(user.address) &&
-			filled(user.locality) &&
-			filled(user.city) &&
-			filled(user.state) &&
-			filled(user.pincode),
-		leads.length > 0,
-	];
-	if (isBusiness) {
-		steps.push(businessDone);
-		// Portfolio step shows for every business type (not just professionals).
-		steps.push(portfolio.length > 0);
-	}
-	const percent = Math.round(
-		(steps.filter(Boolean).length / steps.length) * 100,
+	// Portfolio pager (P15) — 4 per page on the 2-col grid.
+	const PORTFOLIO_PER_PAGE = 4;
+	const portfolioPages = Math.max(
+		1,
+		Math.ceil(portfolio.length / PORTFOLIO_PER_PAGE),
+	);
+	const portfolioSafePage = Math.min(portfolioPage, portfolioPages);
+	const portfolioOffset = (portfolioSafePage - 1) * PORTFOLIO_PER_PAGE;
+	const pagedPortfolio = portfolio.slice(
+		portfolioOffset,
+		portfolioOffset + PORTFOLIO_PER_PAGE,
 	);
 
-	const comingSoon = (what: string) => toastInfo(UI_MESSAGES.comingSoon(what));
+	// Profile-completion checklist (P12): each step is actionable — it opens the
+	// relevant editor / picker, or routes to post-requirement. Basic, photo,
+	// address and requirement apply to everyone; business details show for
+	// business accounts; portfolio shows for business types that keep one
+	// (professionals/dealers — suppliers use the catalog instead).
+	const isBusiness = user.userType !== "person";
+	const hasPortfolioSection = isBusiness && user.userType !== "supplier";
+	const basicDone =
+		filled(user.firstName) && filled(user.lastName) && filled(user.gender);
+	const addressDone =
+		filled(user.address) &&
+		filled(user.locality) &&
+		filled(user.city) &&
+		filled(user.state) &&
+		filled(user.pincode);
+	let businessDone = filled(user.businessName);
+	if (user.userType === "professional") {
+		businessDone = businessDone && Boolean(user.professionalUserType);
+	}
+	if (user.userType === "supplier") {
+		businessDone = businessDone && (user.supplierProductIds?.length ?? 0) > 0;
+	}
+	// When only the description is missing, the business step opens the About
+	// editor directly (rather than the full edit sheet).
+	const businessCoreDone = businessDone;
+	if (isBusiness) businessDone = businessDone && filled(user.about);
+
+	const steps: { label: string; done: boolean; action: () => void }[] = [
+		{
+			label: "Add basic details",
+			done: basicDone,
+			action: () => setEditOpen(true),
+		},
+		{
+			label: "Upload profile picture",
+			done: filled(user.profilePhoto),
+			action: highlightPhotoBox,
+		},
+		...(isBusiness
+			? [
+					{
+						label: "Add business details",
+						done: businessDone,
+						action: () =>
+							businessCoreDone && !filled(user.about)
+								? setAboutOpen(true)
+								: setEditOpen(true),
+					},
+				]
+			: []),
+		{
+			label: "Add address details",
+			done: addressDone,
+			action: () => setAddressOpen(true),
+		},
+		...(hasPortfolioSection
+			? [
+					{
+						label: "Add portfolio",
+						done: portfolio.length > 0,
+						action: () => setAddPortfolioOpen(true),
+					},
+				]
+			: []),
+		{
+			label: "Post a requirement",
+			done: (user.leadCount ?? 0) > 0,
+			action: () => router.push(ROUTES.requirement),
+		},
+	];
+	const percent = Math.round(
+		(steps.filter((s) => s.done).length / steps.length) * 100,
+	);
 
 	const iconBtn =
 		"grid h-5 w-5 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted";
@@ -418,31 +627,85 @@ export default function Profile() {
 								<SavedList key="saved-users" entity="users" />
 							) : tab === "savedLeads" ? (
 								<SavedList key="saved-leads" entity="leads" />
+							) : tab === "myLeads" ? (
+								<MyLeadsPanel />
 							) : (
 								<div className="flex flex-col gap-4 -mx-4 px-4 bg-white pt-4">
 									{/* ---- Identity ---- */}
 									<section>
 										<div className="flex gap-3.5">
-											<button
-												type="button"
-												disabled={!photo}
-												onClick={() =>
-													photo &&
-													setLightbox({
-														images: [{ src: getImageSrc(photo), title }],
-														index: 0,
-													})
-												}
-												className="self-start rounded-2xl"
-												aria-label="View profile photo"
+											<div
+												ref={heroPhotoRef}
+												className={`relative self-start rounded-2xl transition-shadow ${
+													highlightPhoto
+														? "ring-2 ring-primary ring-offset-2 ring-offset-white"
+														: ""
+												}`}
 											>
-												<Avatar
-													name={title}
-													image={photo}
-													size={118}
-													className="rounded-2xl"
+												<button
+													type="button"
+													disabled={!photo}
+													onClick={() =>
+														photo &&
+														setLightbox({
+															images: [{ src: getImageSrc(photo), title }],
+															index: 0,
+														})
+													}
+													className="block rounded-2xl"
+													aria-label="View profile photo"
+												>
+													<Avatar
+														name={title}
+														image={photo}
+														size={118}
+														className="rounded-2xl"
+													/>
+												</button>
+
+												{uploadingPhoto ? (
+													<span className="absolute inset-0 grid place-items-center rounded-2xl bg-black/40">
+														<IonSpinner
+															name="crescent"
+															className="h-6 w-6 text-white"
+														/>
+													</span>
+												) : null}
+
+												{/* Change photo (P6) → crop (P3) → upload. */}
+												<button
+													type="button"
+													onClick={openPhotoPicker}
+													disabled={uploadingPhoto}
+													aria-label="Change profile photo"
+													className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-primary text-white disabled:opacity-60"
+												>
+													<IonIcon icon={ICONS.camera} className="text-base" />
+												</button>
+
+												{/* Remove photo (P5) — only when one is set. */}
+												{photo && !uploadingPhoto ? (
+													<button
+														type="button"
+														onClick={confirmRemovePhoto}
+														aria-label="Remove profile photo"
+														className="absolute -right-1 -top-1 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-white text-danger"
+													>
+														<IonIcon
+															icon={trashOutline}
+															className="text-[13px]"
+														/>
+													</button>
+												) : null}
+
+												<input
+													ref={photoInputRef}
+													type="file"
+													accept="image/*"
+													className="hidden"
+													onChange={onPhotoPick}
 												/>
-											</button>
+											</div>
 											<div className="min-w-0 flex-1">
 												<div className="flex items-start justify-between gap-2">
 													{profession ? (
@@ -497,7 +760,7 @@ export default function Profile() {
 																className="text-[12px] text-muted-light"
 															/>
 														</span>
-														<div className="min-w-0">
+														<div className="min-w-0 flex-1">
 															<span className="block text-[10px] font-medium text-muted-light">
 																Location
 															</span>
@@ -505,6 +768,17 @@ export default function Profile() {
 																{location}
 															</span>
 														</div>
+														<button
+															type="button"
+															aria-label="Edit address"
+															className={iconBtn}
+															onClick={() => setAddressOpen(true)}
+														>
+															<IonIcon
+																icon={ICONS.edit}
+																className="text-[11px]"
+															/>
+														</button>
 													</div>
 												) : null}
 												{user.email ? (
@@ -525,129 +799,220 @@ export default function Profile() {
 														</div>
 													</div>
 												) : null}
+												{!isBusiness && user.phone ? (
+													<div className="mt-2 flex items-center gap-2 leading-none">
+														<span className={META_ICON_BOX}>
+															<IonIcon
+																icon={callOutline}
+																className="text-[13px] text-muted-light"
+															/>
+														</span>
+														<div className="min-w-0">
+															<span className="block text-[11px] font-medium text-muted-light">
+																Phone
+															</span>
+															<span className="block truncate text-[13.5px] font-bold text-ink">
+																{user.phone}
+															</span>
+														</div>
+													</div>
+												) : null}
 											</div>
 										</div>
 
-										{about ? (
-											<div className="mt-3">
-												<span className="mb-0.5 block text-xs font-bold text-ink">
-													About
+										{detail && detail.reviewsCount > 0 ? (
+											<button
+												type="button"
+												onClick={scrollToReviews}
+												className="mt-3 flex w-full items-center gap-2.5 rounded-xl border border-line bg-surface-muted px-3 py-2.5 active:bg-[#eef1f6]"
+											>
+												<span className="text-[18px] font-extrabold text-ink">
+													{(
+														detail.reviewsBreakdown?.average ??
+														detail.ratingAverage
+													).toFixed(1)}
 												</span>
-												<ReadMoreText
-													text={about}
-													lines={4}
-													title="About"
-													className="m-0 text-[11px] font-medium leading text-muted"
+												<Stars
+													value={
+														detail.reviewsBreakdown?.average ??
+														detail.ratingAverage
+													}
 												/>
+												<span className="text-[12px] text-muted-light">
+													{detail.reviewsCount} review
+													{detail.reviewsCount === 1 ? "" : "s"}
+												</span>
+												<IonIcon
+													icon={ICONS.chevronForward}
+													className="ml-auto text-base text-muted-light"
+												/>
+											</button>
+										) : null}
+
+										{isBusiness || about ? (
+											<div className="mt-3">
+												<div className="mb-0.5 flex items-center justify-between gap-2">
+													<span className="block text-xs font-bold text-ink">
+														About
+													</span>
+													<button
+														type="button"
+														aria-label="Edit about"
+														className={iconBtn}
+														onClick={() => setAboutOpen(true)}
+													>
+														<IonIcon
+															icon={ICONS.edit}
+															className="text-[11px]"
+														/>
+													</button>
+												</div>
+												{about ? (
+													<ReadMoreText
+														text={about}
+														lines={4}
+														title="About"
+														className="m-0 text-[11px] font-medium leading text-muted"
+													/>
+												) : (
+													<p className="m-0 text-[11px] font-medium text-muted-light">
+														Add a short description so people know what you do.
+													</p>
+												)}
 											</div>
 										) : null}
 									</section>
 
-									{/* ---- Completion ---- */}
+									{/* ---- Completion (P12) ---- */}
 									{percent < 100 ? (
-										<section className="flex items-center justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-r from-[#0b1220] via-[#1c3259] to-primary p-4 text-white">
-											<div className="min-w-0">
-												<h3 className="m-0 text-base font-extrabold">
-													Complete Your Profile
-												</h3>
-												<p className="mt-1 text-xs leading-snug text-white/70">
-													Add the missing details to build trust and get more
-													leads.
-												</p>
+										<section className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#0b1220] via-[#1c3259] to-primary p-4 text-white">
+											<div className="flex items-center justify-between gap-4">
+												<div className="min-w-0">
+													<h3 className="m-0 text-base font-extrabold">
+														Complete Your Profile
+													</h3>
+													<p className="mt-1 text-xs leading-snug text-white/70">
+														Add the missing details to build trust and get more
+														leads.
+													</p>
+												</div>
+												<CompletionRing percent={percent} />
 											</div>
-											<CompletionRing percent={percent} />
+											<div className="mt-4 grid grid-cols-1 gap-1.5 rounded-xl bg-black/20 p-2.5">
+												{steps.map((step) => (
+													<button
+														key={step.label}
+														type="button"
+														onClick={step.action}
+														className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left active:bg-white/10"
+													>
+														<span
+															className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border ${
+																step.done
+																	? "border-success bg-success text-white"
+																	: "border-white/70 bg-transparent text-transparent"
+															}`}
+														>
+															<IonIcon
+																icon={checkmarkOutline}
+																className="text-[11px]"
+															/>
+														</span>
+														<span
+															className={`text-[12.5px] font-semibold ${
+																step.done
+																	? "text-white/60 line-through"
+																	: "text-white"
+															}`}
+														>
+															{step.label}
+														</span>
+														{!step.done ? (
+															<IonIcon
+																icon={ICONS.chevronForward}
+																className="ml-auto text-sm text-white/50"
+															/>
+														) : null}
+													</button>
+												))}
+											</div>
 										</section>
 									) : null}
 
-									{/* ---- Portfolio ---- */}
-									<section>
-										<div className={SECTION_HEAD}>
-											<h2 className={SECTION_TITLE}>Portfolio</h2>
-											<button
-												type="button"
-												aria-label="Add portfolio item"
-												className={addBtn}
-												onClick={() => setAddPortfolioOpen(true)}
-											>
-												<IonIcon icon={addOutline} className="text-lg" />
-											</button>
-										</div>
-										{myPortfolio === null ? (
-											<PortfolioGridSkeleton
-												count={4}
-												className="grid grid-cols-2 gap-3.5"
-											/>
-										) : portfolio.length ? (
-											<div className="grid grid-cols-2 gap-3.5">
-												{portfolio.map((item, i) => (
-													<PortfolioTile
-														key={item.id}
-														item={item}
-														pending={item.pending}
-														onOpen={() =>
-															setLightbox({ images: portfolioImages, index: i })
-														}
-														onEdit={
-															myPortfolio
-																? () => {
-																		const full = myPortfolio.find(
-																			(p) => p.id === item.id,
-																		);
-																		if (full) setEditEntry(full);
-																	}
-																: undefined
-														}
-														onDelete={
-															myPortfolio
-																? () => confirmDeletePortfolio(item.id)
-																: undefined
-														}
-													/>
-												))}
+									{/* ---- Portfolio / Supplier catalog (P17) ---- */}
+									{user.userType === "supplier" ? (
+										<SupplierCatalogSection />
+									) : (
+										<section>
+											<div className={SECTION_HEAD}>
+												<h2 className={SECTION_TITLE}>Portfolio</h2>
+												<button
+													type="button"
+													aria-label="Add portfolio item"
+													className={addBtn}
+													onClick={() => setAddPortfolioOpen(true)}
+												>
+													<IonIcon icon={addOutline} className="text-lg" />
+												</button>
 											</div>
-										) : (
-											<p className={emptyBox}>
-												No portfolio yet. Add your projects to showcase your
-												work.
-											</p>
-										)}
-									</section>
-
-									{/* ---- My Leads ---- */}
-									<section>
-										<div className={SECTION_HEAD}>
-											<h2 className={SECTION_TITLE}>My Leads</h2>
-											<button
-												type="button"
-												aria-label="Post a requirement"
-												className={addBtn}
-												onClick={() => router.push(ROUTES.requirement)}
-											>
-												<IonIcon icon={addOutline} className="text-lg" />
-											</button>
-										</div>
-										{myLeads === null ? (
-											<SkeletonList count={3} variant="lead" />
-										) : leads.length ? (
-											<div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-												{leads.map((lead) => (
-													<MyLeadCard
-														key={lead.id}
-														lead={lead}
-														onEdit={() => comingSoon("Editing requirements")}
-													/>
-												))}
-											</div>
-										) : (
-											<p className={emptyBox}>
-												You haven&apos;t posted any requirements yet.
-											</p>
-										)}
-									</section>
+											{myPortfolio === null ? (
+												<PortfolioGridSkeleton
+													count={4}
+													className="grid grid-cols-2 gap-3.5"
+												/>
+											) : portfolio.length ? (
+												<>
+													<div className="grid grid-cols-2 gap-3.5">
+														{pagedPortfolio.map((item, i) => (
+															<PortfolioTile
+																key={item.id}
+																item={item}
+																pending={item.pending}
+																photoCount={item.photoCount}
+																onOpen={() =>
+																	setLightbox({
+																		images: portfolioImages,
+																		index: portfolioOffset + i,
+																	})
+																}
+																onEdit={
+																	myPortfolio
+																		? () => {
+																				const full = myPortfolio.find(
+																					(p) => p.id === item.id,
+																				);
+																				if (full) setEditEntry(full);
+																			}
+																		: undefined
+																}
+																onDelete={
+																	myPortfolio
+																		? () => confirmDeletePortfolio(item.id)
+																		: undefined
+																}
+															/>
+														))}
+													</div>
+													{portfolioPages > 1 ? (
+														<Pager
+															page={portfolioSafePage}
+															totalPages={portfolioPages}
+															onChange={setPortfolioPage}
+														/>
+													) : null}
+												</>
+											) : (
+												<p className={emptyBox}>
+													No portfolio yet. Add your projects to showcase your
+													work.
+												</p>
+											)}
+										</section>
+									)}
 
 									{/* ---- Rating & Reviews ---- */}
 									{hasReviews && detail ? (
-										<div className="flex flex-col gap-4">
+										<div ref={reviewsRef} className="flex flex-col gap-4">
 											{detail.reviewsBreakdown ? (
 												<RatingBreakdown
 													breakdown={detail.reviewsBreakdown}
@@ -703,6 +1068,26 @@ export default function Profile() {
 						});
 						setTab("overview");
 					}}
+				/>
+
+				<AboutModal
+					isOpen={aboutOpen}
+					about={about}
+					onClose={() => setAboutOpen(false)}
+					onSaved={() => setReloadKey((k) => k + 1)}
+				/>
+
+				<AddressModal
+					isOpen={addressOpen}
+					user={user}
+					onClose={() => setAddressOpen(false)}
+					onSaved={() => setReloadKey((k) => k + 1)}
+				/>
+
+				<ImageCropperModal
+					file={cropFile}
+					onClose={() => setCropFile(null)}
+					onCropped={onCropped}
 				/>
 
 				{lightbox ? (

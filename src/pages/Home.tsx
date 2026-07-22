@@ -7,6 +7,7 @@ import {
 	IonRouterLink,
 } from "@ionic/react";
 import { useEffect, useState } from "react";
+import { useHistory } from "react-router-dom";
 
 import { LeadCard } from "@/components/cards/LeadCard";
 import { ProfessionalCard } from "@/components/cards/ProfessionalCard";
@@ -35,13 +36,59 @@ import type {
 const LEAD_LIMIT = 6;
 const PRO_LIMIT = 4;
 
+/** Read a tab id from the Home URL query, falling back when absent/unknown. */
+function readCategory<T extends string>(
+	search: string,
+	key: string,
+	allowed: readonly { id: T }[],
+	fallback: T,
+): T {
+	const value = new URLSearchParams(search).get(key);
+	return allowed.some((tab) => tab.id === value) ? (value as T) : fallback;
+}
+
 export default function Home() {
-	const [leadTab, setLeadTab] = useState<LeadCategoryId>("professional");
+	const history = useHistory();
+	// Tabs are URL-driven (deep-linkable) and seeded once from the query.
+	const [leadTab, setLeadTab] = useState<LeadCategoryId>(() =>
+		readCategory(
+			history.location.search,
+			"leadCategory",
+			HOME_LEAD_TABS,
+			"professional",
+		),
+	);
 	const [leads, setLeads] = useState<Lead[] | null>(null);
-	const [proTab, setProTab] = useState<DirectoryCategoryId>("professionals");
+	const [proTab, setProTab] = useState<DirectoryCategoryId>(() =>
+		readCategory(
+			history.location.search,
+			"proCategory",
+			HOME_PRO_TABS,
+			"professionals",
+		),
+	);
 	const [pros, setPros] = useState<ProfessionalListing[] | null>(null);
 	const [reloadKey, setReloadKey] = useState(0);
 	const location = useSelectedLocation();
+
+	// Reflect BOTH tabs into the URL on every switch (mirrors the web's
+	// cross-preserve: changing one section never drops the other's selection).
+	function syncTabs(lead: LeadCategoryId, pro: DirectoryCategoryId) {
+		const params = new URLSearchParams(history.location.search);
+		params.set("leadCategory", lead);
+		params.set("proCategory", pro);
+		history.replace(`${ROUTES.home}?${params.toString()}`);
+	}
+
+	function changeLeadTab(id: LeadCategoryId) {
+		setLeadTab(id);
+		syncTabs(id, proTab);
+	}
+
+	function changeProTab(id: DirectoryCategoryId) {
+		setProTab(id);
+		syncTabs(leadTab, id);
+	}
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -108,7 +155,27 @@ export default function Home() {
 										material
 									</h2>
 									<p className="mb-2.5 mt-1 text-[9px] leading-snug text-muted-light">
-										Choose Professional, Property dealer or Supplier directly
+										Choose a{" "}
+										<IonRouterLink
+											routerLink={`${ROUTES.professionals}?type=professionals`}
+											className="font-semibold text-primary underline decoration-primary/40"
+										>
+											Professional
+										</IonRouterLink>
+										,{" "}
+										<IonRouterLink
+											routerLink={`${ROUTES.professionals}?type=property-dealers`}
+											className="font-semibold text-primary underline decoration-primary/40"
+										>
+											Property Dealer
+										</IonRouterLink>{" "}
+										or{" "}
+										<IonRouterLink
+											routerLink={`${ROUTES.professionals}?type=material-suppliers`}
+											className="font-semibold text-primary underline decoration-primary/40"
+										>
+											Supplier
+										</IonRouterLink>{" "}
 										based on portfolio &amp; reviews
 									</p>
 									<IonRouterLink
@@ -137,7 +204,7 @@ export default function Home() {
 								<CategoryTabs
 									tabs={HOME_LEAD_TABS}
 									active={leadTab}
-									onChange={setLeadTab}
+									onChange={changeLeadTab}
 								/>
 								<div className="mt-3">
 									{leads === null ? (
@@ -167,7 +234,7 @@ export default function Home() {
 								<CategoryTabs
 									tabs={HOME_PRO_TABS}
 									active={proTab}
-									onChange={setProTab}
+									onChange={changeProTab}
 								/>
 								<div className="mt-3">
 									{pros === null ? (

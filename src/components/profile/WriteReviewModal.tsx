@@ -10,6 +10,7 @@ import {
 } from "@/constants/reviews";
 import { submitReview } from "@/lib/api/reviews";
 import { toastError } from "@/lib/api/toast";
+import { ICONS } from "@/theme/icons";
 
 interface WriteReviewModalProps {
 	/** Target user's id (the one being reviewed). */
@@ -50,11 +51,13 @@ export function WriteReviewModal({
 	const [ratings, setRatings] = useState<Ratings>(EMPTY);
 	const [comment, setComment] = useState("");
 	const [saving, setSaving] = useState(false);
+	const [submitted, setSubmitted] = useState(false);
 
 	useEffect(() => {
 		if (isOpen) {
 			setRatings(EMPTY);
 			setComment("");
+			setSubmitted(false);
 		}
 	}, [isOpen]);
 
@@ -79,14 +82,48 @@ export function WriteReviewModal({
 				price: ratings.price,
 				...(comment.trim() ? { comment: comment.trim() } : {}),
 			});
-			// Success is toasted centrally (reviews.submitted).
+			// Success is toasted centrally (reviews.submitted); also show the
+			// in-modal pending-approval screen and let the parent hide the trigger.
 			onSubmitted();
-			onClose();
+			setSubmitted(true);
 		} catch {
 			// Errors (e.g. already reviewed) are toasted centrally; keep open.
 		} finally {
 			setSaving(false);
 		}
+	}
+
+	if (submitted) {
+		return (
+			<IonModal isOpen={isOpen} onDidDismiss={onClose}>
+				<div className="flex h-full flex-col bg-surface-muted">
+					<div className="flex items-center justify-end border-b border-line bg-white px-4 py-3">
+						<button
+							type="button"
+							onClick={onClose}
+							className="text-sm font-bold text-primary"
+						>
+							Done
+						</button>
+					</div>
+					<div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
+						<span className="grid h-16 w-16 place-items-center rounded-full bg-success/10 text-success">
+							<IonIcon icon={ICONS.check} className="text-[34px]" />
+						</span>
+						<div>
+							<h3 className="m-0 text-lg font-extrabold text-ink">
+								Review submitted
+							</h3>
+							<p className="mx-auto mt-1.5 max-w-[300px] text-[13px] leading-relaxed text-muted-light">
+								Thanks for reviewing{" "}
+								<span className="font-semibold text-ink">{name}</span>. Your
+								review will appear on their profile once it&apos;s approved.
+							</p>
+						</div>
+					</div>
+				</div>
+			</IonModal>
+		);
 	}
 
 	return (

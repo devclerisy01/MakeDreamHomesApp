@@ -31,7 +31,7 @@ export function LeadCard({
 	showSave?: boolean;
 }) {
 	const intent = leadIntentChip(lead.category);
-	// Buy → blue; Sell / Hiring / Available → rose (per design).
+	// Buy → blue; Sell → rose (per design).
 	const intentColor =
 		intent === "Buy"
 			? "border-blue-200 text-blue-600"

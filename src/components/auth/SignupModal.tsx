@@ -7,9 +7,15 @@ import { PHONE_DIGITS, PhoneField } from "@/components/auth/PhoneField";
 import { AddressAutocomplete } from "@/components/common/AddressAutocomplete";
 import { CategoryChips } from "@/components/common/CategoryChips";
 import { TextField } from "@/components/common/TextField";
+import { WEB_APP_URL } from "@/config/api";
 import { UI_MESSAGES } from "@/constants/messages";
 import type { AddressResult } from "@/lib/api/places";
-import { checkPhone, otpRegister, requestOtp } from "@/lib/api/auth";
+import {
+	isPhoneAvailable,
+	otpRegister,
+	requestOtp,
+	type SignupDraft,
+} from "@/lib/api/auth";
 import {
 	type CategoryOption,
 	getMaterialCategories,
@@ -27,6 +33,31 @@ const ROLES: { id: RoleId; label: string; userType: string }[] = [
 	{ id: "supplier", label: "Material Supplier", userType: "supplier" },
 ];
 
+/** Per-role headline + pitch on the signup sheet (mirrors the web register
+ *  page's `ROLE_CONTENT`, trimmed for a bottom-sheet). */
+const ROLE_CONTENT: Record<RoleId, { title: string; subtitle: string }> = {
+	user: {
+		title: "Create an Account",
+		subtitle:
+			"Connect with trusted professionals, property dealers and suppliers to get your requirements fulfilled.",
+	},
+	professional: {
+		title: "Join as a Professional",
+		subtitle:
+			"List your services and portfolio, and connect with customers actively looking for you.",
+	},
+	dealer: {
+		title: "Join as a Property Dealer",
+		subtitle:
+			"List plots, flats and commercial space, and connect with active buyers.",
+	},
+	supplier: {
+		title: "Join as a Material Supplier",
+		subtitle:
+			"Showcase your materials and brands, and get enquiries from customers nearby.",
+	},
+};
+
 interface SignupPanelProps {
 	/** Pre-fill the phone carried over from the login popup. */
 	initialPhone?: string;
@@ -40,9 +71,9 @@ interface SignupPanelProps {
 /**
  * Create-an-account — the sign-up popup's inner content. Mounted fresh each time
  * the popup opens (state seeds from `initialPhone`); the bottom-sheet shell +
- * background live in the login gate. Registers via the same
- * `/app/auth/otp/register` endpoint the web uses; an already-registered number
- * switches to the login popup.
+ * background live in the login gate. The collected profile is sent WITH the OTP
+ * request (`requestOtp(phone, draft)`); `otp/register` then verifies the code
+ * and builds the account from that stored draft.
  */
 export function SignupPanel({
 	initialPhone,
@@ -69,6 +100,7 @@ export function SignupPanel({
 	const [supplierCats, setSupplierCats] = useState<number[]>([]);
 
 	const [phoneError, setPhoneError] = useState<string | null>(null);
+	const [phoneTaken, setPhoneTaken] = useState(false);
 	const [termsError, setTermsError] = useState<string | null>(null);
 	const [categoriesError, setCategoriesError] = useState<string | null>(null);
 	const [otpError, setOtpError] = useState<string | null>(null);
@@ -91,38 +123,100 @@ export function SignupPanel({
 		return () => controller.abort();
 	}, []);
 
+	// A7: debounced "is this number already registered?" check on a full number.
+	useEffect(() => {
+		if (phone.length !== PHONE_DIGITS) {
+			setPhoneTaken(false);
+			return;
+		}
+		let cancelled = false;
+		const timer = setTimeout(async () => {
+			const available = await isPhoneAvailable(phone);
+			if (!cancelled && available === false) setPhoneTaken(true);
+		}, 500);
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	}, [phone]);
+
+	/** The profile draft sent WITH the OTP request (and on resend). */
+	function buildDraft(): SignupDraft {
+		return {
+			userType,
+			firstName: firstName.trim() || undefined,
+			lastName: lastName.trim() || undefined,
+			acceptedTerms,
+			address: (addressMeta?.address || address).trim() || undefined,
+			locality: addressMeta?.locality,
+			city: addressMeta?.city,
+			state: addressMeta?.state,
+			pincode: addressMeta?.pincode,
+			latitude: addressMeta?.latitude,
+			longitude: addressMeta?.longitude,
+			professionalCategoryId:
+				role === "professional" ? (proCategory ?? undefined) : undefined,
+			supplierProductIds:
+				role === "supplier" && supplierCats.length > 0
+					? supplierCats
+					: undefined,
+		};
+	}
+
+	/** A9: bring the first errored field into view. */
+	function scrollToError(id: string) {
+		requestAnimationFrame(() => {
+			document
+				.getElementById(id)
+				?.scrollIntoView({ behavior: "smooth", block: "center" });
+		});
+	}
+
+	function openLegal(kind: "terms" | "privacy") {
+		const path =
+			kind === "terms" ? "/en/terms-and-conditions" : "/en/privacy-policy";
+		window.open(`${WEB_APP_URL}${path}`, "_blank", "noopener");
+	}
+
 	async function submitForm(event: FormEvent) {
 		event.preventDefault();
 		if (busy) return;
-		let invalid = false;
+
+		let firstErrorId: string | null = null;
 		if (phone.length !== PHONE_DIGITS) {
 			setPhoneError("Enter a valid 10-digit mobile number.");
-			invalid = true;
-		}
-		if (!acceptedTerms) {
-			setTermsError("Please accept the terms to continue.");
-			invalid = true;
+			if (!firstErrorId) firstErrorId = "signup-phone";
+		} else if (phoneTaken) {
+			if (!firstErrorId) firstErrorId = "signup-phone";
 		}
 		if (role === "professional" && proCategory === null) {
 			setCategoriesError("Please select your profession.");
-			invalid = true;
+			if (!firstErrorId) firstErrorId = "signup-categories";
 		}
 		if (role === "supplier" && supplierCats.length === 0) {
 			setCategoriesError("Please select at least one product category.");
-			invalid = true;
+			if (!firstErrorId) firstErrorId = "signup-categories";
 		}
-		if (invalid) return;
+		if (!acceptedTerms) {
+			setTermsError("Please accept the terms to continue.");
+			if (!firstErrorId) firstErrorId = "signup-terms";
+		}
+		if (firstErrorId) {
+			scrollToError(firstErrorId);
+			return;
+		}
 
 		setBusy(true);
 		setPhoneError(null);
 		try {
-			const { exists } = await checkPhone(phone);
-			if (exists) {
-				toastInfo(UI_MESSAGES.numberRegistered);
-				onSwitchToLogin(phone);
+			// Guard against submitting before the debounced check resolves.
+			const available = await isPhoneAvailable(phone);
+			if (!available) {
+				setPhoneTaken(true);
+				scrollToError("signup-phone");
 				return;
 			}
-			const otp = await requestOtp(phone);
+			const otp = await requestOtp(phone, buildDraft());
 			setVerificationId(otp.verificationId);
 			setResendAfter(otp.resendAfter);
 			setOtpError(null);
@@ -138,28 +232,8 @@ export function SignupPanel({
 		setBusy(true);
 		setOtpError(null);
 		try {
-			const result = await otpRegister({
-				phone,
-				code,
-				verificationId,
-				userType,
-				firstName: firstName.trim() || undefined,
-				lastName: lastName.trim() || undefined,
-				acceptedTerms,
-				address: (addressMeta?.address || address).trim() || undefined,
-				locality: addressMeta?.locality,
-				city: addressMeta?.city,
-				state: addressMeta?.state,
-				pincode: addressMeta?.pincode,
-				latitude: addressMeta?.latitude,
-				longitude: addressMeta?.longitude,
-				professionalCategoryId:
-					role === "professional" ? (proCategory ?? undefined) : undefined,
-				supplierProductIds:
-					role === "supplier" && supplierCats.length > 0
-						? supplierCats
-						: undefined,
-			});
+			// Profile was captured with the OTP request; verify sends only the code.
+			const result = await otpRegister({ phone, code, verificationId });
 			storeSession(result);
 			toastSuccess(UI_MESSAGES.accountCreated);
 			onAuthenticated();
@@ -174,7 +248,8 @@ export function SignupPanel({
 
 	async function resend(): Promise<number> {
 		try {
-			const otp = await requestOtp(phone);
+			// Re-send the draft so the stored signup request stays current.
+			const otp = await requestOtp(phone, buildDraft());
 			setVerificationId(otp.verificationId);
 			toastInfo(UI_MESSAGES.codeSent);
 			return otp.resendAfter;
@@ -212,10 +287,10 @@ export function SignupPanel({
 			) : (
 				<>
 					<h1 className="text-[20px] font-bold leading-tight text-ink">
-						Create an Account
+						{ROLE_CONTENT[role].title}
 					</h1>
 					<p className="mt-2 text-[12px] leading-[18px] text-muted">
-						Tell us what you need — post your requirement
+						{ROLE_CONTENT[role].subtitle}
 					</p>
 
 					<form onSubmit={submitForm} className="mt-5 flex flex-col gap-3.5">
@@ -247,15 +322,30 @@ export function SignupPanel({
 							})}
 						</div>
 
-						<PhoneField
-							value={phone}
-							onChange={(digits) => {
-								setPhone(digits);
-								if (phoneError) setPhoneError(null);
-							}}
-							error={phoneError}
-							disabled={busy}
-						/>
+						<div id="signup-phone">
+							<PhoneField
+								value={phone}
+								onChange={(digits) => {
+									setPhone(digits);
+									if (phoneError) setPhoneError(null);
+									if (phoneTaken) setPhoneTaken(false);
+								}}
+								error={phoneError}
+								disabled={busy}
+							/>
+							{phoneTaken ? (
+								<p className="mt-1.5 text-[11px] text-muted">
+									This number is already registered.{" "}
+									<button
+										type="button"
+										className="font-bold text-primary"
+										onClick={() => onSwitchToLogin(phone)}
+									>
+										Log in instead
+									</button>
+								</p>
+							) : null}
+						</div>
 
 						<div className="grid grid-cols-2 gap-3">
 							<TextField
@@ -274,40 +364,42 @@ export function SignupPanel({
 							/>
 						</div>
 
-						{role === "professional" ? (
-							<div className="flex flex-col gap-2">
-								<span className="text-sm font-semibold text-ink">
-									Type of Professional
-								</span>
-								<CategoryChips
-									options={proOptions}
-									selected={proCategory !== null ? [proCategory] : []}
-									single
-									disabled={busy}
-									error={categoriesError}
-									onChange={(ids) => {
-										setProCategory(ids[0] ?? null);
-										if (categoriesError) setCategoriesError(null);
-									}}
-								/>
-							</div>
-						) : null}
-
-						{role === "supplier" ? (
-							<div className="flex flex-col gap-2">
-								<span className="text-sm font-semibold text-ink">
-									Product Categories
-								</span>
-								<CategoryChips
-									options={supplierOptions}
-									selected={supplierCats}
-									disabled={busy}
-									error={categoriesError}
-									onChange={(ids) => {
-										setSupplierCats(ids);
-										if (categoriesError) setCategoriesError(null);
-									}}
-								/>
+						{role === "professional" || role === "supplier" ? (
+							<div id="signup-categories" className="flex flex-col gap-2">
+								{role === "professional" ? (
+									<>
+										<span className="text-sm font-semibold text-ink">
+											Type of Professional
+										</span>
+										<CategoryChips
+											options={proOptions}
+											selected={proCategory !== null ? [proCategory] : []}
+											single
+											disabled={busy}
+											error={categoriesError}
+											onChange={(ids) => {
+												setProCategory(ids[0] ?? null);
+												if (categoriesError) setCategoriesError(null);
+											}}
+										/>
+									</>
+								) : (
+									<>
+										<span className="text-sm font-semibold text-ink">
+											Product Categories
+										</span>
+										<CategoryChips
+											options={supplierOptions}
+											selected={supplierCats}
+											disabled={busy}
+											error={categoriesError}
+											onChange={(ids) => {
+												setSupplierCats(ids);
+												if (categoriesError) setCategoriesError(null);
+											}}
+										/>
+									</>
+								)}
 							</div>
 						) : null}
 
@@ -327,18 +419,17 @@ export function SignupPanel({
 							}}
 						/>
 
-						<div>
-							<button
-								type="button"
-								role="checkbox"
-								aria-checked={acceptedTerms}
-								onClick={() => {
-									setAcceptedTerms((v) => !v);
-									if (termsError) setTermsError(null);
-								}}
-								className="flex items-start gap-2.5 text-left"
-							>
-								<span
+						<div id="signup-terms">
+							<div className="flex items-start gap-2.5">
+								<button
+									type="button"
+									role="checkbox"
+									aria-checked={acceptedTerms}
+									aria-label="Accept terms and privacy policy"
+									onClick={() => {
+										setAcceptedTerms((v) => !v);
+										if (termsError) setTermsError(null);
+									}}
 									className={`mt-px grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border ${
 										acceptedTerms
 											? "border-primary bg-primary text-white"
@@ -348,13 +439,27 @@ export function SignupPanel({
 									{acceptedTerms ? (
 										<IonIcon icon={checkmarkOutline} className="text-[11px]" />
 									) : null}
-								</span>
-								<span className="text-[11px] leading-[16px] text-ink">
+								</button>
+								<p className="m-0 text-[11px] leading-[16px] text-ink">
 									I agree to the{" "}
-									<span className="font-bold">Terms &amp; Conditions</span> and{" "}
-									<span className="font-bold">Privacy Policy</span>.
-								</span>
-							</button>
+									<button
+										type="button"
+										onClick={() => openLegal("terms")}
+										className="font-bold text-primary underline"
+									>
+										Terms &amp; Conditions
+									</button>{" "}
+									and{" "}
+									<button
+										type="button"
+										onClick={() => openLegal("privacy")}
+										className="font-bold text-primary underline"
+									>
+										Privacy Policy
+									</button>
+									.
+								</p>
+							</div>
 							{termsError ? (
 								<p className="mt-1.5 text-[11px] text-danger">{termsError}</p>
 							) : null}

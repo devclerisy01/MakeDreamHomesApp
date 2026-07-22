@@ -3,18 +3,24 @@ import { alertCircleOutline, locationOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
+import { LeadCard } from "@/components/cards/LeadCard";
 import { PortfolioCard } from "@/components/cards/PortfolioCard";
 import { ProfessionalCard } from "@/components/cards/ProfessionalCard";
 import { RatingBreakdown } from "@/components/cards/RatingBreakdown";
 import { ReviewsList } from "@/components/cards/ReviewsList";
 import { Avatar } from "@/components/common/Avatar";
 import { EmptyState } from "@/components/common/EmptyState";
+import { Lightbox } from "@/components/common/Lightbox";
+import { ListingBadge } from "@/components/common/ListingBadge";
 import { ReadMoreText } from "@/components/common/ReadMoreText";
 import { DetailSkeleton } from "@/components/common/Skeletons";
-import { SaveButton } from "@/components/common/SaveButton";
+import { ViewAllLink } from "@/components/common/ViewAllLink";
 import { WriteReviewModal } from "@/components/profile/WriteReviewModal";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Container } from "@/components/layout/Container";
+import { CATEGORY_PLACEHOLDER_ICON } from "@/constants/categories";
+import { encodeProfessionalId, ROUTES } from "@/constants/routes";
+import { getLeads } from "@/lib/api/leads";
 import {
 	fetchSimilarProfessionals,
 	getProfessionalDetail,
@@ -23,24 +29,24 @@ import { hasReviewed } from "@/lib/api/reviews";
 import { useStartChat } from "@/lib/chat/use-start-chat";
 import { useLogin } from "@/lib/auth/login-gate";
 import { useAuth } from "@/lib/auth/session";
+import { usePortfolioGallery } from "@/lib/portfolio/use-portfolio-gallery";
 import {
 	CARD,
+	LIST_GRID,
 	PORTFOLIO_GRID,
 	SECTION_HEAD,
 	SECTION_TITLE,
-	TAG,
 } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
 import type {
 	DirectoryCategoryId,
+	Lead,
 	ProfessionalDetail as ProDetail,
 	ProfessionalListing,
 } from "@/types";
 
 type Status = "loading" | "ready" | "notfound";
 
-/** Neutral profession chip on the profile card (Figma: grey fill, hairline border). */
-const PRO_TAG = `${TAG} border-line bg-[#F2F4F7] font-semibold text-ink`;
 /** Rounded grey square that frames each profile meta icon (location / experience). */
 const PRO_META_ICON =
 	"flex size-[26px] shrink-0 items-center justify-center rounded-[6px] bg-[#F2F4F7]";
@@ -52,6 +58,52 @@ const SHOWCASE_TITLE: Record<DirectoryCategoryId, string> = {
 	"material-suppliers": "Products",
 };
 
+/** Wrapped pill chips (supplier categories / brands). */
+function ChipRow({ items }: { items: string[] }) {
+	return (
+		<div className="flex flex-wrap gap-1.5">
+			{items.map((item) => (
+				<span
+					key={item}
+					className="inline-flex rounded-full bg-surface-muted px-2.5 py-1 text-[11px] font-semibold text-ink"
+				>
+					{item}
+				</span>
+			))}
+		</div>
+	);
+}
+
+/** Supplier-only "Categories" + "Brands" block on the profile card (DT7). */
+function SupplierMeta({ pro }: { pro: ProDetail }) {
+	if (pro.category !== "material-suppliers") return null;
+	const categories = (pro.showcase?.items ?? [])
+		.map((entry) => entry.title)
+		.filter((title): title is string => !!title);
+	const brands = pro.brands ?? [];
+	if (!categories.length && !brands.length) return null;
+	return (
+		<div className="mt-3 flex flex-col gap-2.5 border-t border-line pt-3">
+			{categories.length ? (
+				<div>
+					<p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-light">
+						Categories
+					</p>
+					<ChipRow items={categories} />
+				</div>
+			) : null}
+			{brands.length ? (
+				<div>
+					<p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-light">
+						Brands
+					</p>
+					<ChipRow items={brands} />
+				</div>
+			) : null}
+		</div>
+	);
+}
+
 export default function ProfessionalDetail() {
 	const { slug } = useParams<{ slug: string }>();
 	const { isAuthed, user } = useAuth();
@@ -62,6 +114,10 @@ export default function ProfessionalDetail() {
 	const [reviewOpen, setReviewOpen] = useState(false);
 	const [alreadyReviewed, setAlreadyReviewed] = useState(false);
 	const [similar, setSimilar] = useState<ProfessionalListing[]>([]);
+	const [leads, setLeads] = useState<Lead[]>([]);
+	const [leadsTotal, setLeadsTotal] = useState(0);
+	const { gallery, loadingId, openGallery, setIndex, closeGallery } =
+		usePortfolioGallery();
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -90,6 +146,29 @@ export default function ProfessionalDetail() {
 			.catch(() => {});
 		return () => controller.abort();
 	}, [slug]);
+
+	// This user's active leads/deals, for the on-detail "Active Leads" section (DT11).
+	useEffect(() => {
+		if (!pro) {
+			setLeads([]);
+			setLeadsTotal(0);
+			return;
+		}
+		const controller = new AbortController();
+		getLeads({ userId: pro.id, limit: 4 }, controller.signal)
+			.then((res) => {
+				if (controller.signal.aborted) return;
+				setLeads(res.items);
+				setLeadsTotal(res.totalItems);
+			})
+			.catch(() => {
+				if (!controller.signal.aborted) {
+					setLeads([]);
+					setLeadsTotal(0);
+				}
+			});
+		return () => controller.abort();
+	}, [pro]);
 
 	// Whether the signed-in viewer has already reviewed this professional (hides
 	// the Write-a-Review trigger).
@@ -151,59 +230,65 @@ export default function ProfessionalDetail() {
 								/>
 							) : (
 								<>
-									<section className={`flex gap-3.5 p-3.5 ${CARD}`}>
-										<Avatar
-											name={pro.name}
-											image={pro.image}
-											size={118}
-											className="rounded-[10px]"
-										/>
-										<div className="min-w-0 flex-1 relative">
-											<div className="flex items-start justify-between gap-2">
-												{pro.profession ? (
-													<span className={PRO_TAG}>{pro.profession}</span>
-												) : (
-													<span />
-												)}
-												<div className="absolute -top-0.5 -right-0.5">
-													<SaveButton entityType="users" entityId={pro.id} />
-												</div>
+									<section className={`p-3.5 ${CARD}`}>
+										<div className="flex gap-3.5">
+											<div className="relative shrink-0">
+												<Avatar
+													name={pro.name}
+													image={pro.image}
+													size={118}
+													className="rounded-[10px]"
+													fallbackIcon={CATEGORY_PLACEHOLDER_ICON[pro.category]}
+												/>
+												<ListingBadge
+													item={pro}
+													className="absolute left-1.5 top-1.5"
+												/>
 											</div>
-											<h2 className="mt-2 text-sm font-bold leading-tight text-ink pr-6">
-												{pro.name}
-											</h2>
-											{pro.location ? (
-												<div className="mt-2 flex items-center gap-2">
-													<span className={PRO_META_ICON}>
-														<IonIcon
-															icon={locationOutline}
-															className="text-[15px] text-muted-light"
-														/>
-													</span>
-													<div className="min-w-0">
-														<span className="block text-[11px] font-medium text-muted-light">
-															Location
+											<div className="min-w-0 flex-1">
+												<h2 className="text-sm font-bold leading-snug text-ink">
+													{pro.name}
+													{pro.profession ? (
+														<span className="font-medium text-muted-light">
+															{" · "}
+															{pro.profession}
 														</span>
-														<span className="text-[13.5px] font-bold text-ink">
-															{pro.location}
+													) : null}
+												</h2>
+												{pro.location ? (
+													<div className="mt-2 flex items-center gap-2">
+														<span className={PRO_META_ICON}>
+															<IonIcon
+																icon={locationOutline}
+																className="text-[15px] text-muted-light"
+															/>
 														</span>
+														<div className="min-w-0">
+															<span className="block text-[11px] font-medium text-muted-light">
+																Location
+															</span>
+															<span className="text-[13.5px] font-bold text-ink">
+																{pro.location}
+															</span>
+														</div>
 													</div>
-												</div>
-											) : null}
-											{pro.about?.length ? (
-												<div className="mt-2">
-													<span className="mb-0.5 block text-xs font-bold text-ink">
-														About
-													</span>
-													<ReadMoreText
-														text={pro.about.join("\n\n")}
-														lines={5}
-														title="About"
-														className="m-0 text-[11px] leading-relaxed text-ink"
-													/>
-												</div>
-											) : null}
+												) : null}
+												{pro.about?.length ? (
+													<div className="mt-2">
+														<span className="mb-0.5 block text-xs font-bold text-ink">
+															About
+														</span>
+														<ReadMoreText
+															text={pro.about.join("\n\n")}
+															lines={5}
+															title="About"
+															className="m-0 text-[11px] leading-relaxed text-ink"
+														/>
+													</div>
+												) : null}
+											</div>
 										</div>
+										<SupplierMeta pro={pro} />
 									</section>
 
 									{!isOwnProfile ? (
@@ -227,7 +312,41 @@ export default function ProfessionalDetail() {
 											</div>
 											<div className={PORTFOLIO_GRID}>
 												{pro.portfolio.map((item) => (
-													<PortfolioCard key={item.id} item={item} />
+													<PortfolioCard
+														key={item.id}
+														item={item}
+														isProduct={pro.category === "material-suppliers"}
+														onOpen={() => openGallery(item)}
+														loading={loadingId === item.id}
+													/>
+												))}
+											</div>
+										</section>
+									) : null}
+
+									{leads.length ? (
+										<section className="mt-[22px]">
+											<div className={SECTION_HEAD}>
+												<h2 className={SECTION_TITLE}>
+													{pro.category === "material-suppliers"
+														? "Active Deals"
+														: "Active Leads"}
+												</h2>
+												{leadsTotal > leads.length ? (
+													<ViewAllLink
+														routerLink={`${ROUTES.leads}?userId=${encodeProfessionalId(
+															pro.id,
+														)}`}
+													/>
+												) : null}
+											</div>
+											<div className={LIST_GRID}>
+												{leads.map((lead) => (
+													<LeadCard
+														key={lead.id}
+														lead={lead}
+														showSave={false}
+													/>
 												))}
 											</div>
 										</section>
@@ -303,6 +422,14 @@ export default function ProfessionalDetail() {
 						isOpen={reviewOpen}
 						onClose={() => setReviewOpen(false)}
 						onSubmitted={() => setAlreadyReviewed(true)}
+					/>
+				) : null}
+				{gallery ? (
+					<Lightbox
+						images={gallery.images}
+						index={gallery.index}
+						onIndexChange={setIndex}
+						onClose={closeGallery}
 					/>
 				) : null}
 			</IonContent>

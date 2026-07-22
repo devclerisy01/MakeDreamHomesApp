@@ -1,5 +1,5 @@
 import { LISTING_PAGE_SIZE } from "@/config/api";
-import { apiGet, apiGetEnvelope, apiPost } from "@/lib/api/client";
+import { apiGet, apiGetEnvelope, apiPatch, apiPost } from "@/lib/api/client";
 import type { LocationFacet } from "@/lib/api/professionals";
 import { uploadImageViaPresign } from "@/lib/api/uploads";
 import {
@@ -26,6 +26,17 @@ export function uploadLeadAttachment(file: File): Promise<string> {
 
 /** The kind of requirement being posted (mirrors the web `RequirementType`). */
 export type RequirementType = "professional" | "property" | "material";
+
+/** One preferred locality (buy-property) — the 7 whitelisted `addresses[]` fields. */
+export interface LeadAddress {
+	address?: string;
+	locality?: string;
+	city?: string;
+	state?: string;
+	pincode?: string;
+	latitude?: string;
+	longitude?: string;
+}
 
 /** Data the Post Requirement form collects before it's mapped to the API body. */
 export interface RequirementInput {
@@ -55,6 +66,8 @@ export interface RequirementInput {
 	price?: string;
 	/** Comma-joined attachment bucket keys (sell requirements only). */
 	imageUrl?: string;
+	/** Up to 5 preferred localities (buy-property) → sent as `addresses[]`. */
+	localities?: LeadAddress[];
 }
 
 /**
@@ -80,7 +93,7 @@ export async function createRequirement(
 					? "available_professional"
 					: "hire_professional";
 
-	const body: Record<string, string> = {
+	const body: Record<string, unknown> = {
 		category,
 		description: input.description.trim(),
 	};
@@ -105,6 +118,20 @@ export async function createRequirement(
 	if (input.longitude?.trim()) body.longitude = input.longitude.trim();
 	if (input.placeName?.trim()) body.placeName = input.placeName.trim();
 	if (input.imageUrl?.trim()) body.imageUrl = input.imageUrl.trim();
+
+	// Multi-locality (buy-property): send ONLY the 7 whitelisted address fields —
+	// the API's forbidNonWhitelisted pipe 400s on any extra key (e.g. country/full).
+	if (input.localities?.length) {
+		body.addresses = input.localities.map((a) => ({
+			address: a.address,
+			locality: a.locality,
+			city: a.city,
+			state: a.state,
+			pincode: a.pincode,
+			latitude: a.latitude,
+			longitude: a.longitude,
+		}));
+	}
 
 	const price = Number(input.price);
 	if (input.price?.trim() && Number.isFinite(price) && price > 0) {
@@ -138,6 +165,8 @@ export interface LeadsPage {
 	items: Lead[];
 	totalPages: number;
 	totalItems: number;
+	/** Per-audience/track counts from `meta.counts` (My Leads + Saved tabs). */
+	counts?: Record<string, number>;
 }
 
 function buildLeadsParams(query: LeadsQuery): URLSearchParams {
@@ -205,6 +234,7 @@ async function fetchLeadsPage(
 		items: data ?? [],
 		totalPages: meta?.totalPages ?? 0,
 		totalItems: meta?.total ?? 0,
+		counts: meta?.counts,
 	};
 }
 
@@ -219,6 +249,35 @@ export function getLeads(
 /** A single lead by id (`GET /app/leads/:id`) — backs the chat lead-context "More". */
 export function getLeadById(id: string, signal?: AbortSignal): Promise<Lead> {
 	return apiGet<Lead>(`/app/leads/${id}`, { auth: true, signal });
+}
+
+/** Editable fields on the owner's lead (mirrors the API `UpdateLeadDto`). */
+export interface UpdateLeadInput {
+	description?: string;
+	address?: string;
+	locality?: string;
+	city?: string;
+	state?: string;
+	pincode?: string;
+	/** Raw price digits; sent as a positive decimal `budget` or omitted. */
+	price?: string;
+}
+
+/** Edit the signed-in user's own lead (`PATCH /app/leads/:id`). */
+export function updateLead(id: string, input: UpdateLeadInput): Promise<Lead> {
+	const body: Record<string, string> = {};
+	if (input.description !== undefined)
+		body.description = input.description.trim();
+	if (input.address !== undefined) body.address = input.address.trim();
+	if (input.locality !== undefined) body.locality = input.locality.trim();
+	if (input.city !== undefined) body.city = input.city.trim();
+	if (input.state !== undefined) body.state = input.state.trim();
+	if (input.pincode !== undefined) body.pincode = input.pincode.trim();
+	const price = Number(input.price);
+	if (input.price?.trim() && Number.isFinite(price) && price > 0) {
+		body.budget = price.toFixed(2);
+	}
+	return apiPatch<Lead>(`/app/leads/${id}`, body);
 }
 
 /** One page of the signed-in user's shortlisted leads (auth). */
@@ -239,15 +298,13 @@ export function getMyLeads(
 
 /**
  * Display label for the intent chip on a lead card (matches the web's
- * `INTENT_CHIP`): buy/sell for property & material, hire/available for the
- * professional track. Returns null when there's no intent to show.
+ * `INTENT_CHIP`): buy/sell for property & material only. The professional
+ * track (hire/available) shows no chip on web, so it returns null here too.
  */
 export function leadIntentChip(category: string): string | null {
 	const c = category.toLowerCase();
 	if (c.startsWith("buy")) return "Buy";
 	if (c.startsWith("sell")) return "Sell";
-	if (c.startsWith("hire")) return "Hiring";
-	if (c.startsWith("available")) return "Available";
 	return null;
 }
 

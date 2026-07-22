@@ -93,3 +93,24 @@ export function getMyPortfolio(
 export function deletePortfolio(id: string): Promise<unknown> {
 	return apiDelete<unknown>(`/app/portfolio/${id}`);
 }
+
+/**
+ * Full (resolved) image set for a public portfolio/product entry
+ * (`GET /app/users/portfolio/:id/images`). Backs the detail-page gallery for
+ * professional/dealer portfolios, which carry only a cover on the card. Fails
+ * soft to an empty list.
+ */
+export async function fetchPortfolioImages(
+	id: string,
+	signal?: AbortSignal,
+): Promise<string[]> {
+	try {
+		const data = await apiGet<{ images?: string[] }>(
+			`/app/users/portfolio/${id}/images`,
+			{ signal },
+		);
+		return data?.images ?? [];
+	} catch {
+		return [];
+	}
+}

@@ -1,3 +1,5 @@
+import { IonIcon } from "@ionic/react";
+
 import { assetUrl } from "@/lib/asset";
 
 interface AvatarProps {
@@ -8,15 +10,19 @@ interface AvatarProps {
 	/** Fill the parent box (parent controls width/height) instead of a fixed square. */
 	fill?: boolean;
 	className?: string;
+	/** Icon shown instead of the name initials when there's no image (e.g. a
+	 *  per-track directory placeholder). */
+	fallbackIcon?: string;
 }
 
-/** Avatar: shows the resolved image, or the name's initials as fallback. */
+/** Avatar: shows the resolved image, a fallback icon, or the name's initials. */
 export function Avatar({
 	name,
 	image,
 	size = 48,
 	fill = false,
 	className = "",
+	fallbackIcon,
 }: AvatarProps) {
 	const url = assetUrl(image);
 	const initials =
@@ -41,6 +47,11 @@ export function Avatar({
 					alt={name}
 					loading="lazy"
 					className="h-full w-full object-cover"
+				/>
+			) : fallbackIcon ? (
+				<IonIcon
+					icon={fallbackIcon}
+					className="text-[1.75em] text-primary/70"
 				/>
 			) : (
 				<span>{initials}</span>
