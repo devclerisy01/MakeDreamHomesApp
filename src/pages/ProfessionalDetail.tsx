@@ -2,6 +2,7 @@ import { IonContent, IonIcon, IonPage } from "@ionic/react";
 import { alertCircleOutline, locationOutline } from "ionicons/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
+import { useTranslations } from "use-intl";
 
 import { LeadCard } from "@/components/cards/LeadCard";
 import { PortfolioCard } from "@/components/cards/PortfolioCard";
@@ -51,18 +52,18 @@ type Status = "loading" | "ready" | "notfound";
 const PRO_META_ICON =
 	"flex size-[26px] shrink-0 items-center justify-center rounded-[6px] bg-[#F2F4F7]";
 
-/** Showcase section heading by track (dealers show Properties, suppliers Products). */
-const SHOWCASE_TITLE: Record<DirectoryCategoryId, string> = {
-	professionals: "Portfolio",
-	"property-dealers": "Properties",
-	"material-suppliers": "Products",
+/** Showcase section heading key by track (dealers → Properties, suppliers → Products). */
+const SHOWCASE_TITLE_KEY: Record<DirectoryCategoryId, string> = {
+	professionals: "professional.portfolio",
+	"property-dealers": "common.properties",
+	"material-suppliers": "common.products",
 };
 
-/** "Similar {type} You May Like" heading noun by track (mirrors the web). */
-const SIMILAR_TYPE_NOUN: Record<DirectoryCategoryId, string> = {
-	professionals: "Professionals",
-	"property-dealers": "Property Dealers",
-	"material-suppliers": "Material Suppliers",
+/** "Similar {type} You May Like" heading noun key by track (mirrors the web). */
+const SIMILAR_TYPE_NOUN_KEY: Record<DirectoryCategoryId, string> = {
+	professionals: "findProfessionals.tabs.professionals",
+	"property-dealers": "findProfessionals.tabs.propertyDealers",
+	"material-suppliers": "findProfessionals.tabs.materialSuppliers",
 };
 
 /** Wrapped pill chips (supplier categories / brands). */
@@ -83,6 +84,7 @@ function ChipRow({ items }: { items: string[] }) {
 
 /** Supplier-only "Categories" + "Brands" block on the profile card (DT7). */
 function SupplierMeta({ pro }: { pro: ProDetail }) {
+	const translate = useTranslations();
 	if (pro.category !== "material-suppliers") return null;
 	const categories = (pro.showcase?.items ?? [])
 		.map((entry) => entry.title)
@@ -94,7 +96,7 @@ function SupplierMeta({ pro }: { pro: ProDetail }) {
 			{categories.length ? (
 				<div>
 					<p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-light">
-						Categories
+						{translate("common.categories")}
 					</p>
 					<ChipRow items={categories} />
 				</div>
@@ -102,7 +104,7 @@ function SupplierMeta({ pro }: { pro: ProDetail }) {
 			{brands.length ? (
 				<div>
 					<p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-light">
-						Brands
+						{translate("common.brands")}
 					</p>
 					<ChipRow items={brands} />
 				</div>
@@ -112,6 +114,7 @@ function SupplierMeta({ pro }: { pro: ProDetail }) {
 }
 
 export default function ProfessionalDetail() {
+	const translate = useTranslations();
 	const { slug } = useParams<{ slug: string }>();
 	const { search } = useLocation();
 	// `?section=leads` / `?section=portfolio` arrive from a card's stat links —
@@ -238,13 +241,17 @@ export default function ProfessionalDetail() {
 				className="inline-flex shrink-0 items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-[13px] font-bold text-white"
 			>
 				<IonIcon icon={ICONS.edit} className="text-[16px]" />
-				Write a Review
+				{translate("professional.writeReview")}
 			</button>
 		) : null;
 
 	return (
 		<IonPage>
-			<AppHeader title={pro?.name ?? "Professional"} back tinted />
+			<AppHeader
+				title={pro?.name ?? translate("join.roles.professional.title")}
+				back
+				tinted
+			/>
 			<IonContent style={{ "--background": "#f6f7fb" } as React.CSSProperties}>
 				<div className="relative">
 					{/* Light-blue gradient backdrop behind the top profile card. */}
@@ -259,7 +266,7 @@ export default function ProfessionalDetail() {
 							) : status === "notfound" || !pro ? (
 								<EmptyState
 									icon={alertCircleOutline}
-									message="Professional not found."
+									message={translate("mobile.professional.notFound")}
 								/>
 							) : (
 								<>
@@ -313,12 +320,12 @@ export default function ProfessionalDetail() {
 												{pro.about?.length ? (
 													<div className="mt-2">
 														<span className="mb-0.5 block text-xs font-bold text-ink">
-															About
+															{translate("professional.about")}
 														</span>
 														<ReadMoreText
 															text={pro.about.join("\n\n")}
 															lines={5}
-															title="About"
+															title={translate("professional.about")}
 															className="m-0 text-[11px] leading-relaxed text-ink"
 														/>
 													</div>
@@ -336,7 +343,7 @@ export default function ProfessionalDetail() {
 											className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] bg-primary py-3 text-[14px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
 										>
 											<IonIcon icon={ICONS.message} className="text-[17px]" />
-											Send Message
+											{translate("common.sendMessage")}
 										</button>
 									) : null}
 
@@ -347,7 +354,10 @@ export default function ProfessionalDetail() {
 										>
 											<div className={SECTION_HEAD}>
 												<h2 className={SECTION_TITLE}>
-													{SHOWCASE_TITLE[pro.category] ?? "Portfolio"}
+													{translate(
+														SHOWCASE_TITLE_KEY[pro.category] ??
+															"professional.portfolio",
+													)}
 												</h2>
 											</div>
 											<div className={PORTFOLIO_GRID}>
@@ -369,8 +379,8 @@ export default function ProfessionalDetail() {
 											<div className={SECTION_HEAD}>
 												<h2 className={SECTION_TITLE}>
 													{pro.category === "material-suppliers"
-														? "Active Deals"
-														: "Active Leads"}
+														? translate("common.activeDeals")
+														: translate("common.activeLeads")}
 												</h2>
 												{leadsTotal > leads.length ? (
 													<ViewAllLink
@@ -412,7 +422,7 @@ export default function ProfessionalDetail() {
 											<div className={`p-4 ${CARD}`}>
 												<div className="mb-3 flex items-center justify-between gap-2">
 													<h2 className="m-0 text-[15px] font-extrabold text-ink">
-														Rating &amp; Reviews
+														{translate("professional.ratingReviews")}
 													</h2>
 													{writeReviewButton}
 												</div>
@@ -424,12 +434,12 @@ export default function ProfessionalDetail() {
 														/>
 													</span>
 													<h3 className="mt-3 text-[15px] font-bold text-ink">
-														No reviews yet
+														{translate("professional.noReviewsTitle")}
 													</h3>
 													<p className="mt-1 max-w-[260px] text-[12px] leading-relaxed text-muted-light">
 														{!isOwnProfile && !alreadyReviewed
-															? "Be the first to share your experience and help others decide."
-															: "Reviews from customers will appear here."}
+															? translate("professional.noReviewsDesc")
+															: translate("profile.emptyReviewsPendingText")}
 													</p>
 												</div>
 											</div>
@@ -440,9 +450,12 @@ export default function ProfessionalDetail() {
 										<section className="mt-[22px]">
 											<div className={SECTION_HEAD}>
 												<h2 className={SECTION_TITLE}>
-													Similar{" "}
-													{SIMILAR_TYPE_NOUN[pro.category] ?? "Professionals"}{" "}
-													You May Like
+													{translate("professional.similarTitle", {
+														type: translate(
+															SIMILAR_TYPE_NOUN_KEY[pro.category] ??
+																"findProfessionals.tabs.professionals",
+														),
+													})}
 												</h2>
 											</div>
 											<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

@@ -1,5 +1,7 @@
+import { useTranslations } from "use-intl";
+
 interface CategoryTabsProps<T extends string> {
-	tabs: { id: T; label: string }[];
+	tabs: { id: T; labelKey: string }[];
 	active: T;
 	onChange: (id: T) => void;
 }
@@ -10,6 +12,7 @@ export function CategoryTabs<T extends string>({
 	active,
 	onChange,
 }: CategoryTabsProps<T>) {
+	const translate = useTranslations();
 	return (
 		<div className="flex gap-2 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
 			{tabs.map((tab) => (
@@ -24,7 +27,7 @@ export function CategoryTabs<T extends string>({
 							: "bg-white text-[#777] shadow-[0_1px_2.4px_rgba(0,0,0,0.17)]"
 					}`}
 				>
-					{tab.label}
+					{translate(tab.labelKey)}
 				</button>
 			))}
 		</div>

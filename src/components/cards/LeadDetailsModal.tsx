@@ -1,6 +1,7 @@
 import { IonIcon } from "@ionic/react";
 import { locationOutline, timeOutline, walletOutline } from "ionicons/icons";
 import { useState } from "react";
+import { useTranslations } from "use-intl";
 
 import { BoxModal } from "@/components/common/BoxModal";
 import { Lightbox } from "@/components/common/Lightbox";
@@ -29,6 +30,7 @@ export function LeadDetailsModal({
 	onClose: () => void;
 	owned?: boolean;
 }) {
+	const translate = useTranslations();
 	const { user } = useAuth();
 	const { startChat, busy: chatBusy } = useStartChat();
 	const budget = formatBudget(lead.budget);
@@ -51,7 +53,11 @@ export function LeadDetailsModal({
 	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
 	return (
-		<BoxModal isOpen={isOpen} onClose={onClose} title="Lead details">
+		<BoxModal
+			isOpen={isOpen}
+			onClose={onClose}
+			title={translate("common.leadDetails")}
+		>
 			<div className="flex flex-col gap-4">
 				<h3 className="m-0 text-base font-semibold leading-snug text-ink">
 					{fullDescription}
@@ -63,7 +69,7 @@ export function LeadDetailsModal({
 							icon={walletOutline}
 							className="text-muted-light text-base"
 						/>
-						Est. Price: {budget}
+						{translate("common.budget")}: {budget}
 					</span>
 				) : null}
 
@@ -108,7 +114,7 @@ export function LeadDetailsModal({
 						{posted ? (
 							<span className="inline-flex items-center gap-1.5">
 								<IonIcon icon={timeOutline} className="text-[15px]" />
-								Posted {posted}
+								{translate("mobile.leads.postedAgo", { time: posted })}
 							</span>
 						) : null}
 					</div>
@@ -123,7 +129,7 @@ export function LeadDetailsModal({
 						className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-primary py-3 text-[14px] font-bold text-white transition-opacity active:opacity-90 disabled:opacity-60"
 					>
 						<IonIcon icon={ICONS.message} className="text-[17px]" />
-						Send Message
+						{translate("common.sendMessage")}
 					</button>
 				) : null}
 			</div>

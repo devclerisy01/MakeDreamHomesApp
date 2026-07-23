@@ -1,5 +1,6 @@
 import { IonIcon, IonRouterLink, useIonRouter } from "@ionic/react";
 import { type MouseEvent, useState } from "react";
+import { useTranslations } from "use-intl";
 
 import { Avatar } from "@/components/common/Avatar";
 import { ListingBadge } from "@/components/common/ListingBadge";
@@ -18,18 +19,18 @@ import type {
 	ShowcaseKind,
 } from "@/types";
 
-/** Label above the thumbnail strip, by showcase kind (mirrors the web card). */
-const SHOWCASE_LABEL: Record<ShowcaseKind, string> = {
-	portfolio: "Portfolio",
-	properties: "Properties",
-	products: "Products",
+/** Translation key for the label above the thumbnail strip, by showcase kind. */
+const SHOWCASE_LABEL_KEY: Record<ShowcaseKind, string> = {
+	portfolio: "professional.portfolio",
+	properties: "common.properties",
+	products: "common.products",
 };
 
-/** Track → display label for the badge (Saved "All" view, where there's no tab). */
-const TRACK_LABEL: Record<DirectoryCategoryId, string> = {
-	professionals: "Professional",
-	"property-dealers": "Property Dealer",
-	"material-suppliers": "Material Supplier",
+/** Track → badge label key (Saved "All" view, where there's no tab). */
+const TRACK_LABEL_KEY: Record<DirectoryCategoryId, string> = {
+	professionals: "join.roles.professional.title",
+	"property-dealers": "join.roles.dealer.title",
+	"material-suppliers": "join.roles.supplier.title",
 };
 
 export function ProfessionalCard({
@@ -46,20 +47,26 @@ export function ProfessionalCard({
 	 *  for every track — used on the mixed Saved list where there's no tab. */
 	showTrackBadge?: boolean;
 }) {
+	const translate = useTranslations();
 	const router = useIonRouter();
 	const [showRatings, setShowRatings] = useState(false);
 
 	const isSupplier = pro.category === "material-suppliers";
 	const thumbs = pro.showcase?.items?.slice(0, 2) ?? [];
 	const leads = pro.leadCount ?? 0;
-	const showcaseLabel = SHOWCASE_LABEL[pro.showcase?.kind ?? "portfolio"];
+	const showcaseLabel = translate(
+		SHOWCASE_LABEL_KEY[pro.showcase?.kind ?? "portfolio"],
+	);
 	const extraThumbs = Math.max(
 		0,
 		(pro.showcase?.count ?? thumbs.length) - thumbs.length,
 	);
 	const hasRatings = pro.reviewCount > 0 && !!pro.categoryAverages;
 	// Suppliers count "Deals"; everyone else counts "Leads" (mirrors the web).
-	const leadNoun = isSupplier ? "Active Deal" : "Active Lead";
+	// Pluralised via the shared common.active{Deal,Lead}[s] keys.
+	const leadNoun = isSupplier
+		? translate(leads > 1 ? "common.activeDeals" : "common.activeDeal")
+		: translate(leads > 1 ? "common.activeLeads" : "common.activeLead");
 	// Suppliers show a tappable product count (→ detail Products section).
 	const productCount = pro.showcase?.count ?? 0;
 
@@ -110,7 +117,9 @@ export function ProfessionalCard({
 					<div className="flex items-start justify-between gap-2">
 						<div className="flex min-w-0 flex-wrap items-center gap-1">
 							{showTrackBadge ? (
-								<span className={TAG_PRIMARY}>{TRACK_LABEL[pro.category]}</span>
+								<span className={TAG_PRIMARY}>
+									{translate(TRACK_LABEL_KEY[pro.category])}
+								</span>
 							) : null}
 							{pro.category === "professionals" && pro.profession ? (
 								<span className={TAG_MUTED}>{pro.profession}</span>
@@ -126,7 +135,9 @@ export function ProfessionalCard({
 								<IonIcon icon={ICONS.star} className="text-[12px]" />
 								{pro.ratingAverage.toFixed(1)}
 								<span className="ml-0.5 text-[10px] font-medium text-primary">
-									{pro.reviewCount} Reviews
+									{translate("professional.reviewsCountShort", {
+										count: pro.reviewCount,
+									})}
 								</span>
 								<IonIcon
 									icon={ICONS.chevronDown}
@@ -153,7 +164,9 @@ export function ProfessionalCard({
 									key={cat.key}
 									className="flex items-center justify-between gap-2 text-[10px] leading-tight"
 								>
-									<span className="truncate text-muted">{cat.shortLabel}</span>
+									<span className="truncate text-muted">
+										{translate(cat.shortKey)}
+									</span>
 									<span className="font-semibold text-ink">
 										{(pro.categoryAverages?.[cat.key] ?? 0).toFixed(1)}
 									</span>
@@ -196,7 +209,10 @@ export function ProfessionalCard({
 									className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-primary"
 								>
 									<IonIcon icon={ICONS.products} className="text-[12px]" />
-									{productCount} {productCount > 1 ? "Products" : "Product"}
+									{productCount}{" "}
+									{productCount > 1
+										? translate("common.products")
+										: translate("common.product")}
 								</button>
 							) : null}
 							{leads > 0 ? (
@@ -207,7 +223,6 @@ export function ProfessionalCard({
 								>
 									<IonIcon icon={ICONS.activeLeads} className="text-[12px]" />
 									{leads} {leadNoun}
-									{leads > 1 ? "s" : ""}
 								</button>
 							) : null}
 						</div>

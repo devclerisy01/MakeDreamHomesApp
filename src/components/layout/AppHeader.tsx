@@ -9,19 +9,16 @@ import { useEffect, useState } from "react";
 
 import { CityPickerModal } from "@/components/location/CityPickerModal";
 import { ROUTES } from "@/constants/routes";
+import { localeLabel } from "@/i18n/config";
 import { type CityOption } from "@/lib/api/locations";
 import {
 	getVerifiedCitiesCached,
 	setLocation,
 	useSelectedLocation,
 } from "@/lib/geo/location-store";
+import { getLanguageOptions, type LanguageOption } from "@/lib/i18n/languages";
+import { setLocale, useSelectedLocale } from "@/lib/i18n/locale-store";
 import { ICONS } from "@/theme/icons";
-
-const LANGUAGES = [
-	{ code: "en", label: "English" },
-	{ code: "hi", label: "हिन्दी" },
-	{ code: "pa", label: "ਪੰਜਾਬੀ" },
-];
 
 interface AppHeaderProps {
 	title?: string;
@@ -48,11 +45,27 @@ export function AppHeader({
 }: AppHeaderProps) {
 	const router = useIonRouter();
 	const location = useSelectedLocation();
+	const lang = useSelectedLocale();
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [cities, setCities] = useState<CityOption[]>([]);
-	const [lang, setLang] = useState("en");
+	const [languages, setLanguages] = useState<LanguageOption[]>([]);
 	const [presentLangSheet] = useIonActionSheet();
-	const activeLang = LANGUAGES.find((l) => l.code === lang)?.label ?? "English";
+	// Label for the active locale — from the fetched list, falling back to the
+	// code's native name (or the raw code) until the list loads.
+	const activeLang =
+		languages.find((l) => l.code === lang)?.label ?? localeLabel(lang, lang);
+
+	// Load the active languages once (module-cached in the service, so cheap
+	// across every header instance).
+	useEffect(() => {
+		let alive = true;
+		void getLanguageOptions().then((list) => {
+			if (alive) setLanguages(list);
+		});
+		return () => {
+			alive = false;
+		};
+	}, []);
 
 	function openLanguageSheet() {
 		presentLangSheet({
@@ -60,10 +73,10 @@ export function AppHeader({
 			header: "Language",
 			cssClass: "mdh-lang-sheet",
 			buttons: [
-				...LANGUAGES.map((l) => ({
+				...languages.map((l) => ({
 					text: l.label,
 					role: l.code === lang ? "selected" : undefined,
-					handler: () => setLang(l.code),
+					handler: () => setLocale(l.code),
 				})),
 				{
 					text: "Cancel",

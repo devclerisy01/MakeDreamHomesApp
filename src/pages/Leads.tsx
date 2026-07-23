@@ -12,6 +12,7 @@ import {
 import { alertCircleOutline, documentTextOutline } from "ionicons/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useTranslations } from "use-intl";
 
 import { LeadCard } from "@/components/cards/LeadCard";
 import { CategoryTabs } from "@/components/common/CategoryTabs";
@@ -41,31 +42,6 @@ import { LIST_GRID } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
 import type { LeadCategoryId } from "@/types";
 
-const INTENT_GROUP: FilterGroup = {
-	key: "intent",
-	label: "Looking to",
-	header: "Looking to",
-	multi: true,
-	options: [
-		{ value: "buy", label: "Buy Leads" },
-		{ value: "sell", label: "Sell Leads" },
-	],
-};
-
-// Property category (matches the web's multi-select "Property Type" group); each
-// chosen group is expanded to its concrete type tokens before querying.
-const PROPERTY_GROUP_GROUP: FilterGroup = {
-	key: "propertyGroup",
-	label: "Property Type",
-	header: "Property Type",
-	multi: true,
-	options: [
-		{ value: "residential", label: "Residential" },
-		{ value: "commercial", label: "Commercial" },
-		{ value: "agriculture", label: "Agriculture" },
-	],
-};
-
 /** Expand a property group to the tokens the web sends (matches web's
  * `propertyGroupToTypes`; the API matches these against requirement+propertyType). */
 const PROPERTY_GROUP_TOKENS: Record<string, string[]> = {
@@ -89,6 +65,7 @@ const placesOf = (sel: FilterSelection): string[] =>
 		.flatMap(([, tokens]) => tokens);
 
 export default function Leads() {
+	const translate = useTranslations();
 	const { search: qs } = useLocation();
 	const userId = useMemo(() => {
 		const raw = new URLSearchParams(qs).get("userId");
@@ -193,35 +170,75 @@ export default function Leads() {
 
 	const groups = useMemo<FilterGroup[]>(() => {
 		// Sort — Latest, plus Nearest when a location is active (mirrors the web).
+		const sortBy = translate("mobile.filters.sortBy");
 		const sortGroup: FilterGroup = {
 			key: "sort",
-			label: "Sort by",
-			header: "Sort by",
+			label: sortBy,
+			header: sortBy,
 			multi: false,
 			options: location
 				? [
-						{ value: "nearest", label: "Nearest" },
-						{ value: "latest", label: "Latest" },
+						{ value: "nearest", label: translate("common.sort.nearest") },
+						{ value: "latest", label: translate("common.sort.latest") },
 					]
-				: [{ value: "latest", label: "Latest" }],
+				: [{ value: "latest", label: translate("common.sort.latest") }],
+		};
+		// "Looking to" intent group (property + material tracks).
+		const intentGroup: FilterGroup = {
+			key: "intent",
+			label: translate("filters.intent"),
+			header: translate("filters.intent"),
+			multi: true,
+			options: [
+				{ value: "buy", label: translate("postRequirement.intentBuyLeads") },
+				{ value: "sell", label: translate("postRequirement.intentSellLeads") },
+			],
 		};
 		const list: FilterGroup[] = [sortGroup];
 		// Web parity: property → Property Type + Looking to; material → Looking to;
 		// professional → no intent/property filter (only sort + profession below).
 		if (category === "property") {
-			list.push(PROPERTY_GROUP_GROUP, INTENT_GROUP);
+			// Property category multi-select; each group expands to its type tokens.
+			const propertyType = translate("profile.propertyType");
+			list.push(
+				{
+					key: "propertyGroup",
+					label: propertyType,
+					header: propertyType,
+					multi: true,
+					options: [
+						{
+							value: "residential",
+							label: translate("postRequirement.propertyResidential"),
+						},
+						{
+							value: "commercial",
+							label: translate("postRequirement.propertyCommercial"),
+						},
+						{
+							value: "agriculture",
+							label: translate("postRequirement.propertyAgriculture"),
+						},
+					],
+				},
+				intentGroup,
+			);
 		} else if (category === "material") {
-			list.push(INTENT_GROUP);
+			list.push(intentGroup);
 		}
 		// Sub-category (profession / product) — single-select, from the catalogue.
 		if (
 			(category === "professional" || category === "material") &&
 			categories.length
 		) {
+			const subLabel =
+				category === "professional"
+					? translate("profile.profession")
+					: translate("common.product");
 			list.push({
 				key: "subcategory",
-				label: category === "professional" ? "Profession" : "Product",
-				header: category === "professional" ? "Profession" : "Product",
+				label: subLabel,
+				header: subLabel,
 				multi: false,
 				options: categories.map((c) => ({ value: c.value, label: c.value })),
 			});
@@ -230,7 +247,7 @@ export default function Leads() {
 			list.push({
 				key: `city:${loc.id}`,
 				label: loc.label,
-				header: "Select Area",
+				header: translate("mobile.filters.selectArea"),
 				multi: true,
 				options: loc.areas.map((a) => ({
 					value: a.value,
@@ -240,7 +257,7 @@ export default function Leads() {
 			});
 		}
 		return list;
-	}, [category, categories, locations, location]);
+	}, [category, categories, locations, location, translate]);
 
 	const fetcher = useCallback(
 		(page: number, signal: AbortSignal) =>
@@ -279,7 +296,11 @@ export default function Leads() {
 
 	return (
 		<IonPage>
-			<AppHeader title="Latest Leads" tinted showLocation />
+			<AppHeader
+				title={translate("mobile.leads.headerTitle")}
+				tinted
+				showLocation
+			/>
 			<IonContent style={{ "--background": "#f6f7fb" } as React.CSSProperties}>
 				<IonRefresher
 					slot="fixed"
@@ -303,7 +324,7 @@ export default function Leads() {
 								key={urlSearch}
 								defaultValue={urlSearch}
 								onSearch={setSearch}
-								placeholder="Describe what you need — e.g. Commercial plot in mohali"
+								placeholder={translate("leads.searchPlaceholder")}
 							/>
 							<div className="mt-3">
 								<CategoryTabs
@@ -320,12 +341,13 @@ export default function Leads() {
 							) : status === "error" ? (
 								<EmptyState
 									icon={alertCircleOutline}
-									message="Couldn't load leads. Pull down to retry."
+									message={translate("mobile.leads.loadError")}
 								/>
 							) : items.length === 0 ? (
 								<EmptyState
 									icon={documentTextOutline}
-									message="No leads match your filters."
+									message={translate("common.noResultsTitle")}
+									description={translate("common.noResultsText")}
 								/>
 							) : (
 								<div className={LIST_GRID}>
@@ -351,7 +373,7 @@ export default function Leads() {
 
 				<IonFab slot="fixed" vertical="bottom" horizontal="end">
 					<IonFabButton
-						aria-label="Filters"
+						aria-label={translate("filters.title")}
 						className="mdh-fab"
 						onClick={() => setFiltersOpen(true)}
 					>

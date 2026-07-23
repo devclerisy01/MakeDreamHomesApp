@@ -1,6 +1,7 @@
 import { IonIcon, IonModal } from "@ionic/react";
 import { star, starOutline } from "ionicons/icons";
 import { useEffect, useState } from "react";
+import { useTranslations } from "use-intl";
 
 import { TextField } from "@/components/common/TextField";
 import { UI_MESSAGES } from "@/constants/messages";
@@ -48,6 +49,7 @@ export function WriteReviewModal({
 	onClose,
 	onSubmitted,
 }: WriteReviewModalProps) {
+	const translate = useTranslations();
 	const [ratings, setRatings] = useState<Ratings>(EMPTY);
 	const [comment, setComment] = useState("");
 	const [saving, setSaving] = useState(false);
@@ -103,7 +105,7 @@ export function WriteReviewModal({
 							onClick={onClose}
 							className="text-sm font-bold text-primary"
 						>
-							Done
+							{translate("mobile.common.done")}
 						</button>
 					</div>
 					<div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
@@ -112,12 +114,11 @@ export function WriteReviewModal({
 						</span>
 						<div>
 							<h3 className="m-0 text-lg font-extrabold text-ink">
-								Review submitted!
+								{translate("professional.reviewSuccessTitle")}
 							</h3>
 							<p className="mx-auto mt-1.5 max-w-[300px] text-[13px] leading-relaxed text-muted-light">
-								Thanks for reviewing{" "}
-								<span className="font-semibold text-ink">{name}</span>. Your
-								review will appear on their profile once it&apos;s approved.
+								{translate("professional.reviewSuccessText")}{" "}
+								{translate("professional.reviewPendingNote")}
 							</p>
 						</div>
 					</div>
@@ -135,10 +136,10 @@ export function WriteReviewModal({
 						onClick={onClose}
 						className="text-sm font-semibold text-muted"
 					>
-						Cancel
+						{translate("common.cancel")}
 					</button>
 					<h2 className="m-0 text-base font-extrabold text-ink">
-						Write a Review
+						{translate("professional.reviewModalTitle")}
 					</h2>
 					<button
 						type="button"
@@ -146,15 +147,16 @@ export function WriteReviewModal({
 						disabled={saving}
 						className="text-sm font-bold text-primary disabled:opacity-50"
 					>
-						{saving ? "Sending…" : "Submit Review"}
+						{saving
+							? translate("messages.status.sending")
+							: translate("professional.reviewSubmit")}
 					</button>
 				</div>
 
 				<div className="flex-1 overflow-y-auto px-4 py-5">
 					<div className="mx-auto flex w-full max-w-[460px] flex-col gap-4">
 						<p className="m-0 text-sm text-muted">
-							How was your experience with{" "}
-							<span className="font-bold text-ink">{name}</span>?
+							{translate("mobile.review.intro", { name })}
 						</p>
 
 						{REVIEW_SUB_CATEGORIES.map((cat) => (
@@ -165,10 +167,10 @@ export function WriteReviewModal({
 								<span className="flex min-w-0 flex-col">
 									<span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
 										<span className="text-base">{cat.icon}</span>
-										{cat.label}
+										{translate(cat.labelKey)}
 									</span>
 									<span className="mt-0.5 text-[11px] leading-snug text-muted-light">
-										{cat.desc}
+										{translate(cat.descKey)}
 									</span>
 								</span>
 								<div className="flex shrink-0 gap-1">
@@ -176,7 +178,7 @@ export function WriteReviewModal({
 										<button
 											key={value}
 											type="button"
-											aria-label={`${cat.label}: ${value} star`}
+											aria-label={`${translate(cat.labelKey)}: ${value} star`}
 											onClick={() =>
 												setRatings((prev) => ({ ...prev, [cat.key]: value }))
 											}
@@ -194,7 +196,7 @@ export function WriteReviewModal({
 						<div>
 							<div className="mb-1.5 flex items-center justify-between gap-2">
 								<span className="text-sm font-semibold text-ink">
-									Comment (optional)
+									{translate("professional.reviewCommentLabel")}
 								</span>
 								<span className="text-[11px] font-medium text-muted-light">
 									{comment.length}/{COMMENT_MAX}
@@ -203,7 +205,7 @@ export function WriteReviewModal({
 							<TextField
 								value={comment}
 								onChange={(next) => setComment(next.slice(0, COMMENT_MAX))}
-								placeholder="Share details of your experience with this professional…"
+								placeholder={translate("professional.reviewCommentPlaceholder")}
 								multiline
 								rows={4}
 							/>

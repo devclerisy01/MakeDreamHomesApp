@@ -2,45 +2,46 @@
  * The five review sub-categories, in display order — shared by the
  * "Rating & Reviews" breakdown, the individual review cards, and the
  * write-review form. `key` maps to the numeric field on a `ReviewsBreakdown` /
- * review; `icon` is the emoji shown beside each row; `label` is the full form
- * label; `desc` is the form subtitle; `shortLabel` is the compact label used on
- * the per-review breakdown bars. Mirrors the web's `constants/reviews.ts`.
+ * review; `icon` is the emoji shown beside each row; `labelKey`/`descKey` are
+ * the use-intl keys for the full form label + subtitle; `shortKey` is the
+ * compact label used on the per-review breakdown bars. Text lives in the DB
+ * catalogue (professional.review*), so the app stays in sync with the web.
  */
 export const REVIEW_SUB_CATEGORIES = [
 	{
 		key: "quality",
 		icon: "🏠",
-		label: "Quality of Work",
-		desc: "How would you rate the quality of the work delivered?",
-		shortLabel: "Quality",
+		labelKey: "professional.reviewQualityLabel",
+		descKey: "professional.reviewQualityDesc",
+		shortKey: "professional.reviewQualityShort",
 	},
 	{
 		key: "behaviour",
 		icon: "💬",
-		label: "Behaviour",
-		desc: "How would you rate their behaviour and professionalism?",
-		shortLabel: "Behaviour",
+		labelKey: "professional.reviewBehaviourLabel",
+		descKey: "professional.reviewBehaviourDesc",
+		shortKey: "professional.reviewBehaviourShort",
 	},
 	{
 		key: "timeliness",
 		icon: "⏱️",
-		label: "Timeliness",
-		desc: "How well did they meet the agreed timeliness?",
-		shortLabel: "Timeliness",
+		labelKey: "professional.reviewTimelinesLabel",
+		descKey: "professional.reviewTimelinesDesc",
+		shortKey: "professional.reviewTimelinesShort",
 	},
 	{
 		key: "communication",
 		icon: "📋",
-		label: "Communication",
-		desc: "How would you rate their communication and responsiveness?",
-		shortLabel: "Communication",
+		labelKey: "professional.reviewTransparencyLabel",
+		descKey: "professional.reviewTransparencyDesc",
+		shortKey: "professional.reviewTransparencyShort",
 	},
 	{
 		key: "price",
 		icon: "💰",
-		label: "Price",
-		desc: "How would you rate their pricing and value for money?",
-		shortLabel: "Price",
+		labelKey: "professional.reviewPriceLabel",
+		descKey: "professional.reviewPriceDesc",
+		shortKey: "professional.reviewPriceShort",
 	},
 ] as const;
 

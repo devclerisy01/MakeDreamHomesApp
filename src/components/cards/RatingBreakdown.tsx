@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "use-intl";
 
 import { Stars } from "@/components/common/Stars";
 import { REVIEW_SUB_CATEGORIES } from "@/constants/reviews";
@@ -18,12 +19,13 @@ export function RatingBreakdown({
 	count,
 	action,
 }: RatingBreakdownProps) {
+	const translate = useTranslations();
 	return (
 		<section className={`p-4 ${CARD}`}>
 			<div className="mb-2 flex items-center justify-between gap-2">
 				<div className="flex flex-col">
 					<h2 className="m-0 text-[15px] font-bold text-ink">
-						Rating &amp; Reviews
+						{translate("professional.ratingReviews")}
 					</h2>
 					<div className="mb-4 flex items-center gap-2.5">
 						<Stars value={breakdown.average} size="lg" />
@@ -46,7 +48,7 @@ export function RatingBreakdown({
 					>
 						<span className="inline-flex items-center gap-2 text-[13px] text-ink">
 							<span className="text-[15px]">{cat.icon}</span>
-							{cat.label}
+							{translate(cat.labelKey)}
 						</span>
 						<Stars value={breakdown[cat.key]} />
 					</div>

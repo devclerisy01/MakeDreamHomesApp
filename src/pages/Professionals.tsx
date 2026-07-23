@@ -12,6 +12,7 @@ import {
 import { alertCircleOutline, peopleOutline } from "ionicons/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useTranslations } from "use-intl";
 
 import { ProfessionalCard } from "@/components/cards/ProfessionalCard";
 import { CategoryTabs } from "@/components/common/CategoryTabs";
@@ -49,15 +50,17 @@ import type { DirectoryCategoryId } from "@/types";
 
 // Matches the web sort dropdown: Latest always; Nearest only when a location is
 // active; Top Rated only on the professionals track. (Web does not expose "Most
-// Experienced".)
-const SORT_LATEST = { value: "latest", label: "Latest" };
-const SORT_NEAREST = { value: "nearest", label: "Nearest" };
-const SORT_TOP_RATED = { value: "topRated", label: "Top Rated" };
+// Experienced".) Labels are resolved via `translate()` inside the component.
+const SORT_KEYS: Record<string, string> = {
+	latest: "common.sort.latest",
+	nearest: "common.sort.nearest",
+	topRated: "common.sort.topRated",
+};
 
-/** The track's "Type" left-label (professionals/suppliers only). */
-const TYPE_LABEL: Partial<Record<DirectoryCategoryId, string>> = {
-	professionals: "Professionals",
-	"material-suppliers": "Materials",
+/** The track's "Type" left-label key (professionals/suppliers only). */
+const TYPE_LABEL_KEY: Partial<Record<DirectoryCategoryId, string>> = {
+	professionals: "common.professionals",
+	"material-suppliers": "mobile.filters.materials",
 };
 
 const placesOf = (sel: FilterSelection): string[] =>
@@ -66,6 +69,7 @@ const placesOf = (sel: FilterSelection): string[] =>
 		.flatMap(([, tokens]) => tokens);
 
 export default function Professionals() {
+	const translate = useTranslations();
 	const { search: qs } = useLocation();
 	const urlSearch = useMemo(
 		() => new URLSearchParams(qs).get("search")?.trim() ?? "",
@@ -165,24 +169,29 @@ export default function Professionals() {
 	}, [filtersOpen, category, search, typeId, flags, location]);
 
 	const groups = useMemo<FilterGroup[]>(() => {
+		const sortOption = (value: string) => ({
+			value,
+			label: translate(SORT_KEYS[value]),
+		});
+		const sortBy = translate("mobile.filters.sortBy");
 		const sortGroup: FilterGroup = {
 			key: "sort",
-			label: "Sort by",
-			header: "Sort by",
+			label: sortBy,
+			header: sortBy,
 			multi: false,
 			options: [
-				SORT_LATEST,
-				...(location ? [SORT_NEAREST] : []),
-				...(category === "professionals" ? [SORT_TOP_RATED] : []),
+				sortOption("latest"),
+				...(location ? [sortOption("nearest")] : []),
+				...(category === "professionals" ? [sortOption("topRated")] : []),
 			],
 		};
 		const list: FilterGroup[] = [sortGroup];
-		const typeLabel = TYPE_LABEL[category];
-		if (typeLabel && categories.length) {
+		const typeLabelKey = TYPE_LABEL_KEY[category];
+		if (typeLabelKey && categories.length) {
 			list.push({
 				key: "type",
-				label: typeLabel,
-				header: "Select Type",
+				label: translate(typeLabelKey),
+				header: translate("mobile.filters.selectType"),
 				multi: false,
 				options: categories.map((c) => ({
 					value: String(c.id),
@@ -192,30 +201,43 @@ export default function Professionals() {
 		}
 		const isSupplier = category === "material-suppliers";
 		const isDealer = category === "property-dealers";
+		const quickFilters = translate("filters.quickFilters");
 		// Quick Filters — mirrors the web sidebar's boolean toggles, including the
 		// track-specific ones (RERA for dealers, Authorized for suppliers).
 		list.push({
 			key: "flags",
-			label: "Quick Filters",
-			header: "Quick Filters",
+			label: quickFilters,
+			header: quickFilters,
 			multi: true,
 			options: [
-				{ value: "hasReviews", label: "Has Reviews Available" },
+				{ value: "hasReviews", label: translate("filters.hasReviews") },
 				{
 					value: "hasPortfolio",
 					label: isSupplier
-						? "Has Products Available"
-						: "Has Portfolio Available",
+						? translate("filters.hasProducts")
+						: translate("filters.hasPortfolio"),
 				},
 				{
 					value: "hasLeads",
-					label: isSupplier ? "Has Deals Available" : "Has Leads Available",
+					label: isSupplier
+						? translate("filters.hasDeals")
+						: translate("filters.hasLeads"),
 				},
 				...(isDealer
-					? [{ value: "isReraCertified", label: "RERA Approved" }]
+					? [
+							{
+								value: "isReraCertified",
+								label: translate("filters.isReraCertified"),
+							},
+						]
 					: []),
 				...(isSupplier
-					? [{ value: "authorizedOnly", label: "Authorized Dealer Only" }]
+					? [
+							{
+								value: "authorizedOnly",
+								label: translate("filters.authorizedOnly"),
+							},
+						]
 					: []),
 			],
 		});
@@ -223,8 +245,8 @@ export default function Professionals() {
 		if (isSupplier && brands.length) {
 			list.push({
 				key: "brand",
-				label: "Brands",
-				header: "Select Brand",
+				label: translate("filters.brands"),
+				header: translate("mobile.filters.selectBrand"),
 				multi: true,
 				options: brands.map((b) => ({
 					value: b.value,
@@ -237,7 +259,7 @@ export default function Professionals() {
 			list.push({
 				key: `city:${loc.id}`,
 				label: loc.label,
-				header: "Select Area",
+				header: translate("mobile.filters.selectArea"),
 				multi: true,
 				options: loc.areas.map((a) => ({
 					value: a.value,
@@ -247,7 +269,7 @@ export default function Professionals() {
 			});
 		}
 		return list;
-	}, [category, categories, locations, brands, location]);
+	}, [category, categories, locations, brands, location, translate]);
 
 	const fetcher = useCallback(
 		(page: number, signal: AbortSignal) =>
@@ -282,7 +304,11 @@ export default function Professionals() {
 
 	return (
 		<IonPage>
-			<AppHeader title="Professionals" tinted showLocation />
+			<AppHeader
+				title={translate("common.professionals")}
+				tinted
+				showLocation
+			/>
 			<IonContent style={{ "--background": "#f6f7fb" } as React.CSSProperties}>
 				<IonRefresher
 					slot="fixed"
@@ -307,7 +333,7 @@ export default function Professionals() {
 								defaultValue={urlSearch}
 								onSearch={setSearch}
 								showNearMe
-								placeholder="Describe what you need — e.g. bricks, steel suppliers in sector 80"
+								placeholder={translate("directory.searchPlaceholder")}
 							/>
 							<div className="mt-3">
 								<CategoryTabs
@@ -324,12 +350,13 @@ export default function Professionals() {
 							) : status === "error" ? (
 								<EmptyState
 									icon={alertCircleOutline}
-									message="Couldn't load professionals. Pull down to retry."
+									message={translate("mobile.professionals.loadError")}
 								/>
 							) : items.length === 0 ? (
 								<EmptyState
 									icon={peopleOutline}
-									message="No professionals match your filters."
+									message={translate("common.noResultsTitle")}
+									description={translate("common.noResultsText")}
 								/>
 							) : (
 								<div className={LIST_GRID}>
@@ -355,7 +382,7 @@ export default function Professionals() {
 
 				<IonFab slot="fixed" vertical="bottom" horizontal="end">
 					<IonFabButton
-						aria-label="Filters"
+						aria-label={translate("filters.title")}
 						className="mdh-fab"
 						onClick={() => setFiltersOpen(true)}
 					>

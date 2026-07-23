@@ -1,5 +1,6 @@
 import { IonIcon } from "@ionic/react";
 import { useState } from "react";
+import { useTranslations } from "use-intl";
 
 import { LeadDetailsModal } from "@/components/cards/LeadDetailsModal";
 import { Lightbox } from "@/components/common/Lightbox";
@@ -30,12 +31,18 @@ export function LeadCard({
 	/** Hide the save heart (e.g. the Home feed, which matches the clean design). */
 	showSave?: boolean;
 }) {
+	const translate = useTranslations();
 	const intent = leadIntentChip(lead.category);
 	// Buy → blue; Sell → rose (per design).
 	const intentColor =
 		intent === "Buy"
 			? "border-blue-200 text-blue-600"
 			: "border-rose-200 text-rose-600";
+	const intentLabel = intent
+		? intent === "Buy"
+			? translate("postRequirement.intentBuy")
+			: translate("postRequirement.intentSell")
+		: null;
 	const icon = CATEGORY_ICON[leadBaseCategory(lead.category)];
 	// Card heading shows the full requirement text (description), falling back to
 	// the short summary when no description is present.
@@ -71,7 +78,7 @@ export function LeadCard({
 							<span
 								className={`absolute -bottom-1.5 left-1/2 flex h-[14px] -translate-x-1/2 items-center justify-center rounded-[4px] border bg-white px-1.5 text-[7.5px] font-black uppercase tracking-wider shadow-[0_1px_2px_rgba(0,0,0,0.05)] ${intentColor}`}
 							>
-								{intent}
+								{intentLabel}
 							</span>
 						) : null}
 					</div>
@@ -163,7 +170,8 @@ export function LeadCard({
 								icon={ICONS.budget}
 								className="text-[12px] text-muted-light"
 							/>
-							Est. Price: <span className="font-bold">{budget}</span>
+							{translate("common.budget")}:{" "}
+							<span className="font-bold">{budget}</span>
 						</span>
 					) : null}
 				</div>

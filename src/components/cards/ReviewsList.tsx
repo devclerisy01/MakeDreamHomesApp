@@ -1,5 +1,6 @@
 import { IonIcon } from "@ionic/react";
 import { useEffect, useState } from "react";
+import { useTranslations } from "use-intl";
 
 import { ReviewCardSkeleton } from "@/components/common/Skeletons";
 import { Stars } from "@/components/common/Stars";
@@ -27,6 +28,7 @@ function initialsOf(name: string): string {
 
 /** One reviewer's card: identity, comment, relative time + sub-category bars. */
 function ReviewCard({ review }: { review: ProfessionalReview }) {
+	const translate = useTranslations();
 	return (
 		<article className={`p-4 ${CARD}`}>
 			<div className="flex items-center gap-3">
@@ -50,7 +52,9 @@ function ReviewCard({ review }: { review: ProfessionalReview }) {
 				{review.comment ? (
 					review.comment
 				) : (
-					<span className="italic text-muted-light">No written comment.</span>
+					<span className="italic text-muted-light">
+						{translate("profile.noComment")}
+					</span>
 				)}
 			</p>
 
@@ -72,7 +76,7 @@ function ReviewCard({ review }: { review: ProfessionalReview }) {
 							className="flex items-center gap-2 text-[11px] font-semibold"
 						>
 							<span className="w-[92px] shrink-0 truncate text-muted">
-								{cat.shortLabel}
+								{translate(cat.shortKey)}
 							</span>
 							<span className="h-[5px] flex-1 overflow-hidden rounded-full bg-primary/10">
 								<span
@@ -105,6 +109,7 @@ export function ReviewsList({
 	initialReviews: ProfessionalReview[];
 	total: number;
 }) {
+	const translate = useTranslations();
 	const [page, setPage] = useState(1);
 	const [items, setItems] = useState<ProfessionalReview[]>(initialReviews);
 	const [loading, setLoading] = useState(false);
@@ -137,7 +142,7 @@ export function ReviewsList({
 		<section>
 			<div className={SECTION_HEAD}>
 				<h2 className={SECTION_TITLE}>
-					Reviews
+					{translate("common.reviews")}
 					<span className="ml-2 inline-flex min-w-[22px] items-center justify-center rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-bold text-muted">
 						{total}
 					</span>
@@ -158,7 +163,7 @@ export function ReviewsList({
 				<div className="mt-3.5 flex items-center justify-center gap-4">
 					<button
 						type="button"
-						aria-label="Previous page"
+						aria-label={translate("mobile.common.previousPage")}
 						disabled={page <= 1 || loading}
 						onClick={() => goToPage(page - 1)}
 						className="grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-ink disabled:opacity-40"
@@ -170,7 +175,7 @@ export function ReviewsList({
 					</span>
 					<button
 						type="button"
-						aria-label="Next page"
+						aria-label={translate("mobile.common.nextPage")}
 						disabled={page >= totalPages || loading}
 						onClick={() => goToPage(page + 1)}
 						className="grid h-9 w-9 place-items-center rounded-full border border-line bg-white text-ink disabled:opacity-40"

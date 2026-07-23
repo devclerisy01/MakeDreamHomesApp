@@ -1,5 +1,6 @@
 import { IonIcon, useIonRouter, useIonViewWillEnter } from "@ionic/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTranslations } from "use-intl";
 
 import { professionalHref, ROUTES } from "@/constants/routes";
 import {
@@ -125,6 +126,7 @@ function SearchRowSkeleton() {
  * with the term. Tapping a hit opens it directly.
  */
 export function GlobalSearch() {
+	const translate = useTranslations();
 	const router = useIonRouter();
 	const [term, setTerm] = useState("");
 	const [result, setResult] = useState<GlobalSearchResult>(EMPTY);
@@ -248,7 +250,10 @@ export function GlobalSearch() {
 				</span>
 				<span className="min-w-0">
 					<span className="block truncate text-sm font-semibold text-ink">
-						<Highlight text={item.title || "Requirement"} term={q} />
+						<Highlight
+							text={item.title || translate("mobile.search.untitledLead")}
+							term={q}
+						/>
 					</span>
 					{detail || item.location ? (
 						<span className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-light">
@@ -292,7 +297,7 @@ export function GlobalSearch() {
 					onClick={onViewAll}
 					className="shrink-0 rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-primary active:bg-primary-light/50"
 				>
-					View All
+					{translate("common.viewAll")}
 				</button>
 			</div>
 		);
@@ -319,8 +324,8 @@ export function GlobalSearch() {
 					type="search"
 					value={term}
 					maxLength={100}
-					placeholder="Describe what you need"
-					aria-label="Search"
+					placeholder={translate("hero.searchPlaceholder")}
+					aria-label={translate("common.search")}
 					role="combobox"
 					aria-controls="global-search-suggestions"
 					aria-expanded={open && ready}
@@ -336,7 +341,7 @@ export function GlobalSearch() {
 				{term ? (
 					<button
 						type="button"
-						aria-label="Clear search"
+						aria-label={translate("mobile.search.clear")}
 						onClick={clear}
 						className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-light transition-colors active:bg-surface-muted"
 					>
@@ -365,7 +370,7 @@ export function GlobalSearch() {
 							{professionalItems.length > 0 ? (
 								<div>
 									{renderGroupHeading(
-										"Professionals",
+										translate("hero.search.professionals"),
 										result.professionalCount,
 										viewAllProfessionals,
 									)}
@@ -375,7 +380,11 @@ export function GlobalSearch() {
 
 							{leadItems.length > 0 ? (
 								<div>
-									{renderGroupHeading("Leads", result.leadCount, viewAllLeads)}
+									{renderGroupHeading(
+										translate("hero.search.leads"),
+										result.leadCount,
+										viewAllLeads,
+									)}
 									{leadItems.map((item) => renderRow(item))}
 								</div>
 							) : null}

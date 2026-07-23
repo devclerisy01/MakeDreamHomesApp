@@ -8,6 +8,7 @@ import {
 } from "@ionic/react";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
+import { useTranslations } from "use-intl";
 
 import { LeadCard } from "@/components/cards/LeadCard";
 import { ProfessionalCard } from "@/components/cards/ProfessionalCard";
@@ -48,6 +49,7 @@ function readCategory<T extends string>(
 }
 
 export default function Home() {
+	const translate = useTranslations();
 	const history = useHistory();
 	// Tabs are URL-driven (deep-linkable) and seeded once from the query.
 	const [leadTab, setLeadTab] = useState<LeadCategoryId>(() =>
@@ -151,39 +153,41 @@ export default function Home() {
 							>
 								<div className="flex min-w-0 flex-1 flex-col p-3">
 									<h2 className="m-0 text-[12px] font-bold leading-[1.3] text-ink">
-										Hire a professional, buy/sell property or construction
-										material
+										{translate("hero.headlinePre")}
 									</h2>
+									{/* Same sentence the web hero renders, from the shared hero.*
+									    keys: "Choose <Professional>, <Property dealer>, or
+									    <Supplier> directly based on portfolio & reviews". */}
 									<p className="mb-2.5 mt-1 text-[9px] leading-snug text-muted-light">
-										Choose a{" "}
+										{translate("hero.choosePrefix")}{" "}
 										<IonRouterLink
 											routerLink={`${ROUTES.professionals}?type=professionals`}
 											className="font-semibold text-primary underline decoration-primary/40"
 										>
-											Professional
+											{translate("hero.professional")}
 										</IonRouterLink>
 										,{" "}
 										<IonRouterLink
 											routerLink={`${ROUTES.professionals}?type=property-dealers`}
 											className="font-semibold text-primary underline decoration-primary/40"
 										>
-											Property Dealer
-										</IonRouterLink>{" "}
-										or{" "}
+											{translate("hero.propertyDealer")}
+										</IonRouterLink>
+										, or{" "}
 										<IonRouterLink
 											routerLink={`${ROUTES.professionals}?type=material-suppliers`}
 											className="font-semibold text-primary underline decoration-primary/40"
 										>
-											Supplier
+											{translate("hero.supplier")}
 										</IonRouterLink>{" "}
-										based on portfolio &amp; reviews
+										{translate("hero.chooseSuffix")}
 									</p>
 									<IonRouterLink
 										routerLink={ROUTES.requirement}
 										className="mt-1 block w-fit no-underline"
 									>
 										<span className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-[12px] font-semibold leading-none text-white">
-											Post Your Requirement
+											{translate("hero.postRequirementLink")}
 											<IonIcon
 												icon={ICONS.arrowForward}
 												className="text-[14px]"
@@ -196,7 +200,9 @@ export default function Home() {
 
 							<section className="mt-[22px]">
 								<div className={SECTION_HEAD}>
-									<h2 className={SECTION_TITLE}>Latest Leads</h2>
+									<h2 className={SECTION_TITLE}>
+										{translate("mobile.leads.headerTitle")}
+									</h2>
 									<ViewAllLink
 										routerLink={`${ROUTES.leads}?category=${leadTab}`}
 									/>
@@ -212,7 +218,8 @@ export default function Home() {
 									) : leads.length === 0 ? (
 										<EmptyState
 											icon={ICONS.info}
-											message="No leads in this category yet."
+											message={translate("common.noResultsTitle")}
+											description={translate("common.noResultsText")}
 										/>
 									) : (
 										<div className={LIST_GRID}>
@@ -226,7 +233,9 @@ export default function Home() {
 
 							<section className="mt-[22px]">
 								<div className={SECTION_HEAD}>
-									<h2 className={SECTION_TITLE}>Find Professionals</h2>
+									<h2 className={SECTION_TITLE}>
+										{translate("mobile.home.findProfessionals")}
+									</h2>
 									<ViewAllLink
 										routerLink={`${ROUTES.professionals}?type=${proTab}`}
 									/>
@@ -242,7 +251,8 @@ export default function Home() {
 									) : pros.length === 0 ? (
 										<EmptyState
 											icon={ICONS.info}
-											message="No professionals in this category yet."
+											message={translate("common.noResultsTitle")}
+											description={translate("common.noResultsText")}
 										/>
 									) : (
 										<div className={LIST_GRID}>
