@@ -117,7 +117,7 @@ export function SupplierCategoryModal({
 						Cancel
 					</button>
 					<h2 className="m-0 text-base font-extrabold text-ink">
-						{lockCategory ? "Edit Category" : "Add Category"}
+						{lockCategory ? "Edit category" : "Add Category"}
 					</h2>
 					<button
 						type="button"

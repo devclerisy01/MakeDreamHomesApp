@@ -163,7 +163,7 @@ export function LeadCard({
 								icon={ICONS.budget}
 								className="text-[12px] text-muted-light"
 							/>
-							Budget: <span className="font-bold">{budget}</span>
+							Est. Price: <span className="font-bold">{budget}</span>
 						</span>
 					) : null}
 				</div>

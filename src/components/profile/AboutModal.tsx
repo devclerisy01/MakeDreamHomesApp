@@ -102,7 +102,7 @@ export function AboutModal({
 							value={value}
 							onValueChange={setValue}
 							rows={7}
-							placeholder="Describe your work, experience and what makes you stand out."
+							placeholder="Describe your experience, expertise and the services you offer."
 							ariaLabel="About"
 							error={showError}
 						/>

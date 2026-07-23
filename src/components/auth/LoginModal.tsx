@@ -45,7 +45,7 @@ export function LoginPanel({
 		event.preventDefault();
 		if (busy) return;
 		if (phone.length !== PHONE_DIGITS) {
-			setPhoneError("Enter a valid 10-digit mobile number.");
+			setPhoneError("Enter a valid 10-digit phone number.");
 			return;
 		}
 		setBusy(true);

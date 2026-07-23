@@ -63,7 +63,7 @@ export function LeadDetailsModal({
 							icon={walletOutline}
 							className="text-muted-light text-base"
 						/>
-						Budget: {budget}
+						Est. Price: {budget}
 					</span>
 				) : null}
 

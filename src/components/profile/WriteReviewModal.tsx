@@ -112,7 +112,7 @@ export function WriteReviewModal({
 						</span>
 						<div>
 							<h3 className="m-0 text-lg font-extrabold text-ink">
-								Review submitted
+								Review submitted!
 							</h3>
 							<p className="mx-auto mt-1.5 max-w-[300px] text-[13px] leading-relaxed text-muted-light">
 								Thanks for reviewing{" "}
@@ -146,7 +146,7 @@ export function WriteReviewModal({
 						disabled={saving}
 						className="text-sm font-bold text-primary disabled:opacity-50"
 					>
-						{saving ? "Sending…" : "Submit"}
+						{saving ? "Sending…" : "Submit Review"}
 					</button>
 				</div>
 
@@ -203,7 +203,7 @@ export function WriteReviewModal({
 							<TextField
 								value={comment}
 								onChange={(next) => setComment(next.slice(0, COMMENT_MAX))}
-								placeholder="Share the details of your experience"
+								placeholder="Share details of your experience with this professional…"
 								multiline
 								rows={4}
 							/>

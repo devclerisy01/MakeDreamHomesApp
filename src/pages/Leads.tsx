@@ -303,6 +303,7 @@ export default function Leads() {
 								key={urlSearch}
 								defaultValue={urlSearch}
 								onSearch={setSearch}
+								placeholder="Describe what you need — e.g. Commercial plot in mohali"
 							/>
 							<div className="mt-3">
 								<CategoryTabs
@@ -319,12 +320,12 @@ export default function Leads() {
 							) : status === "error" ? (
 								<EmptyState
 									icon={alertCircleOutline}
-									message="Couldn't load requirements. Pull down to retry."
+									message="Couldn't load leads. Pull down to retry."
 								/>
 							) : items.length === 0 ? (
 								<EmptyState
 									icon={documentTextOutline}
-									message="No requirements match your filters."
+									message="No leads match your filters."
 								/>
 							) : (
 								<div className={LIST_GRID}>

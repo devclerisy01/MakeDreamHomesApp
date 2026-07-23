@@ -22,8 +22,8 @@ type Audience = "all" | LeadCategoryId;
 const AUDIENCE_TABS: { id: Audience; label: string }[] = [
 	{ id: "all", label: "All" },
 	{ id: "professional", label: "For Professionals" },
-	{ id: "property", label: "For Property" },
-	{ id: "material", label: "For Materials" },
+	{ id: "property", label: "For Property Dealers" },
+	{ id: "material", label: "For Material Suppliers" },
 ];
 
 const HIDE_SCROLLBAR = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
@@ -86,7 +86,7 @@ export function MyLeadsPanel() {
 
 	return (
 		<div className="-mx-4 bg-white px-4 pt-4">
-			<SearchBar placeholder="Search your requirements" onSearch={setSearch} />
+			<SearchBar placeholder="Search your leads" onSearch={setSearch} />
 
 			<div
 				className={`-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-0.5 ${HIDE_SCROLLBAR}`}
@@ -148,12 +148,12 @@ export function MyLeadsPanel() {
 				) : status === "error" ? (
 					<EmptyState
 						icon={ICONS.alert}
-						message="Couldn't load your requirements. Pull down to retry."
+						message="Couldn't load your leads. Pull down to retry."
 					/>
 				) : items.length === 0 ? (
 					<EmptyState
 						icon={ICONS.lead}
-						message="You haven't posted any requirements yet."
+						message="You haven't posted any leads yet."
 					/>
 				) : (
 					<div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">

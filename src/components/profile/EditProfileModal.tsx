@@ -1,4 +1,10 @@
-import { IonIcon, IonModal, IonSpinner, IonSelect, IonSelectOption } from "@ionic/react";
+import {
+	IonIcon,
+	IonModal,
+	IonSpinner,
+	IonSelect,
+	IonSelectOption,
+} from "@ionic/react";
 import { cameraOutline } from "ionicons/icons";
 import { type ChangeEvent, useEffect, useState } from "react";
 
@@ -21,7 +27,7 @@ import { toastError, toastInfo } from "@/lib/api/toast";
 import { setStoredUser } from "@/lib/auth/session";
 
 const GENDERS = [
-	{ value: "", label: "Not set" },
+	{ value: "", label: "Not Specified" },
 	{ value: "male", label: "Male" },
 	{ value: "female", label: "Female" },
 	{ value: "other", label: "Other" },
@@ -280,20 +286,20 @@ export function EditProfileModal({
 
 						<div className="grid grid-cols-2 gap-3">
 							<div>
-								<span className={LABEL}>First name</span>
+								<span className={LABEL}>First Name</span>
 								<TextField
 									value={firstName}
 									onChange={setFirstName}
-									placeholder="First name"
+									placeholder="First Name"
 									autoCapitalize="words"
 								/>
 							</div>
 							<div>
-								<span className={LABEL}>Last name</span>
+								<span className={LABEL}>Last Name</span>
 								<TextField
 									value={lastName}
 									onChange={setLastName}
-									placeholder="Last name"
+									placeholder="Last Name"
 									autoCapitalize="words"
 								/>
 							</div>
@@ -324,11 +330,11 @@ export function EditProfileModal({
 						{isBusiness ? (
 							<>
 								<div>
-									<span className={LABEL}>Business name</span>
+									<span className={LABEL}>Business Name</span>
 									<TextField
 										value={businessName}
 										onChange={setBusinessName}
-										placeholder="Business name"
+										placeholder="Business Name"
 										autoCapitalize="words"
 									/>
 								</div>
@@ -356,12 +362,12 @@ export function EditProfileModal({
 										className="h-4 w-4 accent-primary"
 									/>
 									<span className="text-sm font-semibold text-ink">
-										RERA certified
+										is RERA Approved?
 									</span>
 								</label>
 								{isReraCertified ? (
 									<div className="mt-2">
-										<span className={LABEL}>RERA number</span>
+										<span className={LABEL}>RERA Certificate No.</span>
 										<TextField
 											value={reraNumber}
 											onChange={setReraNumber}

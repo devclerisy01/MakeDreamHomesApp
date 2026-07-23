@@ -77,7 +77,7 @@ const META_ICON_BOX =
 	"flex size-[26px] shrink-0 items-center justify-center rounded-[6px] bg-[#F2F4F7]";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-	{ id: "overview", label: "Overview", icon: ICONS.tabOverview },
+	{ id: "overview", label: "My Profile", icon: ICONS.tabOverview },
 	{ id: "myLeads", label: "My Leads", icon: ICONS.tabLeads },
 	{ id: "savedPros", label: "Saved Professionals", icon: ICONS.tabSaved },
 	{ id: "savedLeads", label: "Saved Leads", icon: ICONS.tabSaved },
@@ -217,8 +217,8 @@ export default function Profile() {
 	/** Confirm, then soft-delete a portfolio entry (removed from the list). */
 	function confirmDeletePortfolio(id: string) {
 		void presentAlert({
-			header: "Delete project?",
-			message: "This removes the project from your portfolio.",
+			header: "Delete portfolio item?",
+			message: "This removes the item from your portfolio.",
 			buttons: [
 				{ text: "Cancel", role: "cancel" },
 				{
@@ -518,19 +518,19 @@ export default function Profile() {
 
 	const steps: { label: string; done: boolean; action: () => void }[] = [
 		{
-			label: "Add basic details",
+			label: "Add General Details",
 			done: basicDone,
 			action: () => setEditOpen(true),
 		},
 		{
-			label: "Upload profile picture",
+			label: "Upload Profile Picture",
 			done: filled(user.profilePhoto),
 			action: highlightPhotoBox,
 		},
 		...(isBusiness
 			? [
 					{
-						label: "Add business details",
+						label: "Add Business Details",
 						done: businessDone,
 						action: () =>
 							businessCoreDone && !filled(user.about)
@@ -540,21 +540,21 @@ export default function Profile() {
 				]
 			: []),
 		{
-			label: "Add address details",
+			label: "Add Address Details",
 			done: addressDone,
 			action: () => setAddressOpen(true),
 		},
 		...(hasPortfolioSection
 			? [
 					{
-						label: "Add portfolio",
+						label: "Upload Portfolio",
 						done: portfolio.length > 0,
 						action: () => setAddPortfolioOpen(true),
 					},
 				]
 			: []),
 		{
-			label: "Post a requirement",
+			label: "Post Your First Requirement",
 			done: (user.leadCount ?? 0) > 0,
 			action: () => router.push(ROUTES.requirement),
 		},

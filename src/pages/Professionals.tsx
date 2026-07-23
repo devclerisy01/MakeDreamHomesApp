@@ -212,7 +212,7 @@ export default function Professionals() {
 					label: isSupplier ? "Has Deals Available" : "Has Leads Available",
 				},
 				...(isDealer
-					? [{ value: "isReraCertified", label: "RERA Certified" }]
+					? [{ value: "isReraCertified", label: "RERA Approved" }]
 					: []),
 				...(isSupplier
 					? [{ value: "authorizedOnly", label: "Authorized Dealer Only" }]
@@ -307,7 +307,7 @@ export default function Professionals() {
 								defaultValue={urlSearch}
 								onSearch={setSearch}
 								showNearMe
-								placeholder="Search professionals, dealers & suppliers"
+								placeholder="Describe what you need — e.g. bricks, steel suppliers in sector 80"
 							/>
 							<div className="mt-3">
 								<CategoryTabs

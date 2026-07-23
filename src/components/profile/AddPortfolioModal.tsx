@@ -150,7 +150,7 @@ export function AddPortfolioModal({
 	async function save() {
 		if (saving) return;
 		if (!title.trim()) {
-			setError("Please add a project name.");
+			setError("Add a portfolio name.");
 			return;
 		}
 		if (photos.length === 0) {
@@ -229,7 +229,7 @@ export function AddPortfolioModal({
 						Cancel
 					</button>
 					<h2 className="m-0 text-base font-extrabold text-ink">
-						{isEdit ? "Edit Project" : "Add Project"}
+						{isEdit ? "Edit Portfolio Item" : "Add Portfolio"}
 					</h2>
 					<button
 						type="button"
@@ -244,7 +244,7 @@ export function AddPortfolioModal({
 				<div className="flex-1 overflow-y-auto px-4 py-5">
 					<div className="mx-auto flex w-full max-w-[460px] flex-col gap-4">
 						<div>
-							<span className={LABEL}>Project name</span>
+							<span className={LABEL}>Title</span>
 							<TextField
 								value={title}
 								onChange={(value) => {
@@ -278,7 +278,7 @@ export function AddPortfolioModal({
 						</div>
 
 						<div>
-							<span className={LABEL}>Project address</span>
+							<span className={LABEL}>Address</span>
 							<AddressAutocomplete
 								value={address}
 								placeholder="Search the project address"

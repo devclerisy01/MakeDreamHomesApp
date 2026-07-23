@@ -184,7 +184,7 @@ export function SignupPanel({
 
 		let firstErrorId: string | null = null;
 		if (phone.length !== PHONE_DIGITS) {
-			setPhoneError("Enter a valid 10-digit mobile number.");
+			setPhoneError("Enter a valid 10-digit phone number.");
 			if (!firstErrorId) firstErrorId = "signup-phone";
 		} else if (phoneTaken) {
 			if (!firstErrorId) firstErrorId = "signup-phone";
@@ -198,7 +198,7 @@ export function SignupPanel({
 			if (!firstErrorId) firstErrorId = "signup-categories";
 		}
 		if (!acceptedTerms) {
-			setTermsError("Please accept the terms to continue.");
+			setTermsError("Please accept the terms and conditions to continue.");
 			if (!firstErrorId) firstErrorId = "signup-terms";
 		}
 		if (firstErrorId) {

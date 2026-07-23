@@ -452,7 +452,7 @@ export default function Conversation() {
 								void send();
 							}
 						}}
-						placeholder="Type a message…"
+						placeholder="Write your message…"
 						className="min-w-0 flex-1 resize-none bg-transparent px-2 py-1 text-sm text-ink outline-none placeholder:text-muted-light"
 					/>
 					<button

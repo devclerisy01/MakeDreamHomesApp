@@ -20,7 +20,7 @@ import type {
 
 /** Label above the thumbnail strip, by showcase kind (mirrors the web card). */
 const SHOWCASE_LABEL: Record<ShowcaseKind, string> = {
-	portfolio: "Projects",
+	portfolio: "Portfolio",
 	properties: "Properties",
 	products: "Products",
 };

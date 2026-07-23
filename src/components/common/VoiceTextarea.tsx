@@ -163,7 +163,7 @@ export function VoiceTextarea({
 				}`}
 			>
 				<IonIcon icon={ICONS.micSolid} className="text-[11px]" />
-				{listening ? "Listening…" : "Tap to Speak"}
+				{listening ? "Listening…" : "Tap to speak"}
 			</button>
 		</div>
 	);

@@ -131,7 +131,7 @@ export function SavedList({ entity }: { entity: "users" | "leads" }) {
 				placeholder={
 					entity === "users"
 						? "Search saved professionals"
-						: "Search saved requirements"
+						: "Search saved leads"
 				}
 				onSearch={setSearch}
 			/>
@@ -187,7 +187,7 @@ export function SavedList({ entity }: { entity: "users" | "leads" }) {
 						message={
 							entity === "users"
 								? "No saved professionals here yet."
-								: "No saved requirements here yet."
+								: "No saved leads here yet."
 						}
 					/>
 				) : (

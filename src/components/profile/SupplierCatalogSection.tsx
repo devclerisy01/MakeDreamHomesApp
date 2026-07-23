@@ -126,7 +126,7 @@ export function SupplierCatalogSection() {
 					<h2 className={SECTION_TITLE}>Categories</h2>
 					<button
 						type="button"
-						aria-label="Add category"
+						aria-label="Add Category"
 						className={addBtn}
 						onClick={() => setCategoryModal({ mode: "add" })}
 					>
@@ -194,7 +194,7 @@ export function SupplierCatalogSection() {
 					<h2 className={SECTION_TITLE}>Products</h2>
 					<button
 						type="button"
-						aria-label="Add product"
+						aria-label="Add Product"
 						className={addBtn}
 						disabled={list.length === 0}
 						onClick={() => setProductModal({})}

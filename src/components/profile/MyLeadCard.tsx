@@ -100,7 +100,7 @@ export function MyLeadCard({
 											event.stopPropagation();
 											onEdit();
 										}}
-										aria-label="Edit requirement"
+										aria-label="Edit lead"
 										className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-white text-muted-light active:bg-surface-muted"
 									>
 										<IonIcon icon={createOutline} className="text-[15px]" />

@@ -143,7 +143,9 @@ export function OtpVerify({
 								disabled={secondsLeft > 0 || submitting}
 								className="font-bold text-primary disabled:font-semibold disabled:text-muted-light"
 							>
-								{secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend"}
+								{secondsLeft > 0
+									? `Resend OTP in ${secondsLeft}s`
+									: "Resend OTP"}
 							</button>
 						</>
 					)}

@@ -61,7 +61,7 @@ const OPTIONS: { type: RequirementType; label: string; icon: string }[] = [
 
 const PROPERTY_GROUPS = [
 	{ value: "residential", label: "Residential" },
-	{ value: "commercial", label: "Commercial Space" },
+	{ value: "commercial", label: "Commercial" },
 	{ value: "agriculture", label: "Agriculture" },
 ];
 const RESIDENTIAL_TYPES = [
@@ -442,10 +442,10 @@ export default function Requirement() {
 				fail("req-category");
 			}
 		} else if (!propertyGroup) {
-			setCategoryError("Select a property category.");
+			setCategoryError("Please select a property category.");
 			fail("req-category");
 		} else if (propertyGroup === "residential" && !propertyType) {
-			setCategoryError("Select a property type.");
+			setCategoryError("Please select a property type.");
 			fail("req-category");
 		}
 		if (description.trim().length < 20) {
@@ -537,11 +537,11 @@ export default function Requirement() {
 			fail("req-name");
 		}
 		if (phone.length !== PHONE_DIGITS) {
-			setPhoneError("Enter a valid 10-digit mobile number.");
+			setPhoneError("Enter a valid 10-digit phone number.");
 			fail("req-phone");
 		}
 		if (!acceptedTerms) {
-			setTermsError("Please accept the terms to continue.");
+			setTermsError("Please accept the terms and conditions to continue.");
 			fail("req-terms");
 		}
 		if (firstError) {
@@ -1016,7 +1016,7 @@ export default function Requirement() {
 							id="req-address"
 							className="m-0 mb-1.5 text-[12px] font-bold text-ink"
 						>
-							{isBuyProperty ? "Preferred localities" : "Address"}
+							{isBuyProperty ? "Preferred Localities" : "Address"}
 						</h2>
 						{isBuyProperty ? (
 							<p className="mb-1.5 -mt-0.5 text-[10px] text-muted-light">
@@ -1060,7 +1060,7 @@ export default function Requirement() {
 								}`}
 							>
 								<IonIcon icon={ICONS.micSolid} className="text-[11px]" />
-								{listening ? "Listening…" : "Tap to Speak"}
+								{listening ? "Listening…" : "Tap to speak"}
 							</button>
 						</div>
 						{descriptionError ? (
@@ -1110,7 +1110,7 @@ export default function Requirement() {
 										: "border-[#dae3ef] bg-white text-muted"
 								}`}
 							>
-								Not Sure
+								Not sure
 							</button>
 						</div>
 					</section>
@@ -1183,7 +1183,7 @@ export default function Requirement() {
 								<span className="text-[11px] leading-snug text-muted">
 									I agree to the{" "}
 									<span className="font-semibold text-ink">
-										Terms of Service
+										Terms &amp; Conditions
 									</span>{" "}
 									and{" "}
 									<span className="font-semibold text-ink">Privacy Policy</span>

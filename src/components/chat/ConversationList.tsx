@@ -182,7 +182,7 @@ export function ConversationList({ reloadKey = 0 }: { reloadKey?: number }) {
 				<input
 					value={query}
 					onChange={(event) => setQuery(event.target.value)}
-					placeholder="Search conversations"
+					placeholder="Search messages…"
 					className="h-10 w-full rounded-xl border border-line bg-surface-muted pl-9 pr-3 font-sans text-sm text-ink outline-none placeholder:text-muted-light focus:border-ink focus:bg-white"
 				/>
 			</div>
@@ -207,7 +207,7 @@ export function ConversationList({ reloadKey = 0 }: { reloadKey?: number }) {
 						message={
 							query
 								? "No conversations match your search."
-								: "No conversations yet. Message a professional to get started."
+								: "No conversations yet. Start a chat from a professional’s profile."
 						}
 					/>
 				) : (

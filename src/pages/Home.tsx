@@ -183,7 +183,7 @@ export default function Home() {
 										className="mt-1 block w-fit no-underline"
 									>
 										<span className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-[12px] font-semibold leading-none text-white">
-											Post Requirement
+											Post Your Requirement
 											<IonIcon
 												icon={ICONS.arrowForward}
 												className="text-[14px]"

@@ -58,6 +58,13 @@ const SHOWCASE_TITLE: Record<DirectoryCategoryId, string> = {
 	"material-suppliers": "Products",
 };
 
+/** "Similar {type} You May Like" heading noun by track (mirrors the web). */
+const SIMILAR_TYPE_NOUN: Record<DirectoryCategoryId, string> = {
+	professionals: "Professionals",
+	"property-dealers": "Property Dealers",
+	"material-suppliers": "Material Suppliers",
+};
+
 /** Wrapped pill chips (supplier categories / brands). */
 function ChipRow({ items }: { items: string[] }) {
 	return (
@@ -432,7 +439,11 @@ export default function ProfessionalDetail() {
 									{similar.length ? (
 										<section className="mt-[22px]">
 											<div className={SECTION_HEAD}>
-												<h2 className={SECTION_TITLE}>Similar professionals</h2>
+												<h2 className={SECTION_TITLE}>
+													Similar{" "}
+													{SIMILAR_TYPE_NOUN[pro.category] ?? "Professionals"}{" "}
+													You May Like
+												</h2>
 											</div>
 											<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 												{similar.map((s) => (

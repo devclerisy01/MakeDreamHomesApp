@@ -292,7 +292,7 @@ export function GlobalSearch() {
 					onClick={onViewAll}
 					className="shrink-0 rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-primary active:bg-primary-light/50"
 				>
-					View all
+					View All
 				</button>
 			</div>
 		);

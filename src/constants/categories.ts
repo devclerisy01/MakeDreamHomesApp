@@ -18,14 +18,14 @@ export const CATEGORY_PLACEHOLDER_ICON: Record<DirectoryCategoryId, string> = {
 export const DIRECTORY_TABS: Tab<DirectoryCategoryId>[] = [
 	{ id: "professionals", label: "Professionals" },
 	{ id: "property-dealers", label: "Property Dealers" },
-	{ id: "material-suppliers", label: "Materials Suppliers" },
+	{ id: "material-suppliers", label: "Material Suppliers" },
 ];
 
 /** Audience tabs on the Leads screen. */
 export const LEAD_TABS: Tab<LeadCategoryId>[] = [
 	{ id: "professional", label: "For Professionals" },
 	{ id: "property", label: "For Property Dealers" },
-	{ id: "material", label: "For Materials Suppliers" },
+	{ id: "material", label: "For Material Suppliers" },
 ];
 
 /** Compact audience tabs used in the Home "Latest Leads" section. */

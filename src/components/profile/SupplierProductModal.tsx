@@ -269,7 +269,7 @@ export function SupplierProductModal({
 						)}
 
 						<div>
-							<span className={LABEL}>Product title</span>
+							<span className={LABEL}>Name</span>
 							<TextField
 								value={title}
 								onChange={(value) => {
@@ -282,7 +282,7 @@ export function SupplierProductModal({
 						</div>
 
 						<div>
-							<span className={LABEL}>Product images</span>
+							<span className={LABEL}>Images</span>
 							<p className="mb-2 text-xs text-muted-light">
 								Tap a photo to set it as the cover. Up to {MAX_FILES} images, 5
 								MB each.
