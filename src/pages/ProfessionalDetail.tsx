@@ -1,7 +1,7 @@
 import { IonContent, IonIcon, IonPage } from "@ionic/react";
 import { alertCircleOutline, locationOutline } from "ionicons/icons";
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 
 import { LeadCard } from "@/components/cards/LeadCard";
 import { PortfolioCard } from "@/components/cards/PortfolioCard";
@@ -106,6 +106,15 @@ function SupplierMeta({ pro }: { pro: ProDetail }) {
 
 export default function ProfessionalDetail() {
 	const { slug } = useParams<{ slug: string }>();
+	const { search } = useLocation();
+	// `?section=leads` / `?section=portfolio` arrive from a card's stat links —
+	// scroll that section into view once it has rendered (mirrors the web).
+	const section = useMemo(
+		() => new URLSearchParams(search).get("section"),
+		[search],
+	);
+	const leadsRef = useRef<HTMLElement>(null);
+	const portfolioRef = useRef<HTMLElement>(null);
 	const { isAuthed, user } = useAuth();
 	const { openLogin } = useLogin();
 	const { startChat, busy: chatBusy } = useStartChat();
@@ -169,6 +178,23 @@ export default function ProfessionalDetail() {
 			});
 		return () => controller.abort();
 	}, [pro]);
+
+	// Once the target section has rendered, bring it into view for a `?section=`
+	// deep-link. The short delay lets layout settle first.
+	useEffect(() => {
+		if (status !== "ready") return;
+		const target =
+			section === "leads" && leads.length > 0
+				? leadsRef.current
+				: section === "portfolio" && pro?.portfolio?.length
+					? portfolioRef.current
+					: null;
+		if (!target) return;
+		const id = setTimeout(() => {
+			target.scrollIntoView({ behavior: "smooth", block: "start" });
+		}, 200);
+		return () => clearTimeout(id);
+	}, [section, status, leads.length, pro?.portfolio?.length]);
 
 	// Whether the signed-in viewer has already reviewed this professional (hides
 	// the Write-a-Review trigger).
@@ -240,10 +266,14 @@ export default function ProfessionalDetail() {
 													className="rounded-[10px]"
 													fallbackIcon={CATEGORY_PLACEHOLDER_ICON[pro.category]}
 												/>
-												<ListingBadge
-													item={pro}
-													className="absolute left-1.5 top-1.5"
-												/>
+												{/* Suppliers show authorization on the category chips, not
+												    an over-image badge (matches web). */}
+												{pro.category !== "material-suppliers" ? (
+													<ListingBadge
+														item={pro}
+														className="absolute left-1.5 top-1.5"
+													/>
+												) : null}
 											</div>
 											<div className="min-w-0 flex-1">
 												<h2 className="text-sm font-bold leading-snug text-ink">
@@ -304,7 +334,10 @@ export default function ProfessionalDetail() {
 									) : null}
 
 									{pro.portfolio?.length ? (
-										<section className="mt-[22px]">
+										<section
+											ref={portfolioRef}
+											className="mt-[22px] scroll-mt-4"
+										>
 											<div className={SECTION_HEAD}>
 												<h2 className={SECTION_TITLE}>
 													{SHOWCASE_TITLE[pro.category] ?? "Portfolio"}
@@ -325,7 +358,7 @@ export default function ProfessionalDetail() {
 									) : null}
 
 									{leads.length ? (
-										<section className="mt-[22px]">
+										<section ref={leadsRef} className="mt-[22px] scroll-mt-4">
 											<div className={SECTION_HEAD}>
 												<h2 className={SECTION_TITLE}>
 													{pro.category === "material-suppliers"

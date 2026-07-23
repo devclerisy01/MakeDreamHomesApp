@@ -11,18 +11,14 @@
  *   1. an Ionicons import (the current defaults below), or
  *   2. a URL/data-URI string pointing at an SVG.
  *
- * To use a custom SVG, either:
- *   • drop the file in `src/assets/icons/foo.svg` and import it:
+ * To use a custom SVG, drop the file in `src/assets/icons/foo.svg` and import it:
  *       import fooUrl from "@/assets/icons/foo.svg";  // Vite gives a URL string
  *       export const ICONS = { ...  foo: fooUrl  ... }
- *   • or inline it as a data-URI with the `svg()` helper below:
- *       export const ICONS = { ...  foo: svg(`<svg …>…</svg>`)  ... }
+ * Use `fill="currentColor"` (or `stroke="currentColor"`) inside the SVG so it
+ * inherits the surrounding text color, exactly like Ionicons — then
+ * `className="text-primary"` etc. keeps working.
  *
  * Share the icon and tell me its semantic name; I replace that one entry.
- *
- * NOTE for inline SVGs: use `fill="currentColor"` (or `stroke="currentColor"`)
- * inside the SVG so the icon inherits the surrounding text color, exactly like
- * Ionicons do — then `className="text-primary"` etc. keeps working.
  */
 import {
 	addOutline,
@@ -49,6 +45,7 @@ import {
 	peopleOutline,
 	personOutline,
 	search,
+	shieldCheckmark,
 	starHalf,
 	starOutline,
 	timeOutline,
@@ -80,14 +77,6 @@ import iconTabLeads from "@/assets/icons/tab-leads.svg";
 import iconTabProfessionals from "@/assets/icons/tab-professionals.svg";
 import iconTabProfile from "@/assets/icons/tab-profile.svg";
 import iconTabRequirement from "@/assets/icons/tab-requirement.svg";
-
-/**
- * Wrap a raw inline SVG string as a data-URI usable by `IonIcon`'s `icon=` prop.
- * Use `currentColor` for fills/strokes inside the SVG so it inherits text color.
- */
-export function svg(markup: string): string {
-	return `data:image/svg+xml;utf8,${encodeURIComponent(markup)}`;
-}
 
 /**
  * The registry. Keys are semantic; values are icon sources (Ionicons import or
@@ -163,6 +152,8 @@ export const ICONS = {
 	edit: iconEdit, // custom (pencil)
 	check: checkmark,
 	checkOutline: checkmarkOutline,
+	shieldCheck: shieldCheckmark,
+	products: cubeOutline,
 	filters: optionsOutline,
 	logout: logOutOutline,
 
@@ -175,6 +166,3 @@ export const ICONS = {
 	info: informationCircleOutline,
 	alert: alertCircleOutline,
 } as const;
-
-/** Semantic icon name — the keys of {@link ICONS}. */
-export type IconName = keyof typeof ICONS;

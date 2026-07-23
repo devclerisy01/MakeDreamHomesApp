@@ -47,29 +47,18 @@ const INTENT_GROUP: FilterGroup = {
 	header: "Looking to",
 	multi: true,
 	options: [
-		{ value: "buy", label: "Buy" },
-		{ value: "sell", label: "Sell" },
+		{ value: "buy", label: "Buy Leads" },
+		{ value: "sell", label: "Sell Leads" },
 	],
 };
 
-const PRO_INTENT_GROUP: FilterGroup = {
-	key: "intent",
-	label: "Looking to",
-	header: "Looking to",
-	multi: true,
-	options: [
-		{ value: "hire", label: "Hiring" },
-		{ value: "available", label: "Available for work" },
-	],
-};
-
-// Single-select property category (mirrors the web); the chosen group is
-// expanded to its concrete type tokens before querying so results match.
+// Property category (matches the web's multi-select "Property Type" group); each
+// chosen group is expanded to its concrete type tokens before querying.
 const PROPERTY_GROUP_GROUP: FilterGroup = {
 	key: "propertyGroup",
-	label: "Category",
-	header: "Property Category",
-	multi: false,
+	label: "Property Type",
+	header: "Property Type",
+	multi: true,
 	options: [
 		{ value: "residential", label: "Residential" },
 		{ value: "commercial", label: "Commercial" },
@@ -147,11 +136,14 @@ export default function Leads() {
 	const intent = useMemo(() => selection.intent ?? [], [selection]);
 	const subcategory = selection.subcategory?.[0];
 	const sort = selection.sort?.[0];
-	// Single property group, expanded to its type tokens (matches the web).
-	const propertyGroup = useMemo(() => {
-		const g = selection.propertyGroup?.[0];
-		return g ? (PROPERTY_GROUP_TOKENS[g] ?? [g]) : [];
-	}, [selection]);
+	// Selected property groups, each expanded to its type tokens (matches the web).
+	const propertyGroup = useMemo(
+		() =>
+			(selection.propertyGroup ?? []).flatMap(
+				(g) => PROPERTY_GROUP_TOKENS[g] ?? [g],
+			),
+		[selection],
+	);
 	const places = useMemo(() => placesOf(selection), [selection]);
 	const activeFilterCount = useMemo(
 		() => Object.values(selection).reduce((n, v) => n + v.length, 0),
@@ -214,12 +206,12 @@ export default function Leads() {
 				: [{ value: "latest", label: "Latest" }],
 		};
 		const list: FilterGroup[] = [sortGroup];
+		// Web parity: property → Property Type + Looking to; material → Looking to;
+		// professional → no intent/property filter (only sort + profession below).
 		if (category === "property") {
-			list.push(INTENT_GROUP, PROPERTY_GROUP_GROUP);
+			list.push(PROPERTY_GROUP_GROUP, INTENT_GROUP);
 		} else if (category === "material") {
 			list.push(INTENT_GROUP);
-		} else if (category === "professional") {
-			list.push(PRO_INTENT_GROUP);
 		}
 		// Sub-category (profession / product) — single-select, from the catalogue.
 		if (

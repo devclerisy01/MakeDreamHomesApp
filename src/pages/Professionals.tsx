@@ -149,6 +149,9 @@ export default function Professionals() {
 				productType: category === "material-suppliers" ? typeId : undefined,
 				hasReviews: flags.includes("hasReviews"),
 				hasPortfolio: flags.includes("hasPortfolio"),
+				hasLeads: flags.includes("hasLeads"),
+				isReraCertified: flags.includes("isReraCertified"),
+				authorizedOnly: flags.includes("authorizedOnly"),
 				...locationToGeo(location),
 			},
 			controller.signal,
@@ -188,17 +191,32 @@ export default function Professionals() {
 			});
 		}
 		const isSupplier = category === "material-suppliers";
+		const isDealer = category === "property-dealers";
+		// Quick Filters — mirrors the web sidebar's boolean toggles, including the
+		// track-specific ones (RERA for dealers, Authorized for suppliers).
 		list.push({
 			key: "flags",
-			label: "Ratings",
-			header: isSupplier ? "Ratings & Products" : "Ratings & Portfolio",
+			label: "Quick Filters",
+			header: "Quick Filters",
 			multi: true,
 			options: [
-				{ value: "hasReviews", label: "Has Reviews" },
+				{ value: "hasReviews", label: "Has Reviews Available" },
 				{
 					value: "hasPortfolio",
-					label: isSupplier ? "Has Products Available" : "Has Portfolio",
+					label: isSupplier
+						? "Has Products Available"
+						: "Has Portfolio Available",
 				},
+				{
+					value: "hasLeads",
+					label: isSupplier ? "Has Deals Available" : "Has Leads Available",
+				},
+				...(isDealer
+					? [{ value: "isReraCertified", label: "RERA Certified" }]
+					: []),
+				...(isSupplier
+					? [{ value: "authorizedOnly", label: "Authorized Dealer Only" }]
+					: []),
 			],
 		});
 		// Brand facet — suppliers only (the API returns brands for that track).
@@ -247,6 +265,9 @@ export default function Professionals() {
 					places,
 					hasReviews: flags.includes("hasReviews"),
 					hasPortfolio: flags.includes("hasPortfolio"),
+					hasLeads: flags.includes("hasLeads"),
+					isReraCertified: flags.includes("isReraCertified"),
+					authorizedOnly: flags.includes("authorizedOnly"),
 					brands: brandSel,
 					...locationToGeo(location),
 				},

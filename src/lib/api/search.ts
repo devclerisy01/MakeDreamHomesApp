@@ -22,8 +22,12 @@ export interface SearchResultItem {
 export interface GlobalSearchResult {
 	/** Professionals and leads combined into one uniformly-shaped list. */
 	results: SearchResultItem[];
-	/** Total matched rows for the active search — drives "Load more" / "View all". */
+	/** Total matched rows across both groups. */
 	count: number;
+	/** Total matched professionals — drives the Professionals group's count badge / "View all". */
+	professionalCount: number;
+	/** Total matched leads — drives the Leads group's count badge / "View all". */
+	leadCount: number;
 }
 
 /** The API caps `limit` at 20 per group. */
@@ -33,6 +37,8 @@ export const SEARCH_MIN_TERM = 2;
 const EMPTY: GlobalSearchResult = {
 	results: [],
 	count: 0,
+	professionalCount: 0,
+	leadCount: 0,
 };
 
 /**
@@ -63,6 +69,8 @@ export async function globalSearch(
 		return {
 			results: data.results ?? [],
 			count: data.count ?? 0,
+			professionalCount: data.professionalCount ?? 0,
+			leadCount: data.leadCount ?? 0,
 		};
 	} catch {
 		return EMPTY;

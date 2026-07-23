@@ -3,8 +3,9 @@ import { IonIcon } from "@ionic/react";
 import { ICONS } from "@/theme/icons";
 import type { ProfessionalListing } from "@/types";
 
+// White pill with a shadow and dark label, matching the web ListingBadge.
 const BADGE =
-	"inline-flex items-center gap-1 rounded-[4px] border border-success/30 bg-success/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase leading-none text-success";
+	"inline-flex items-center gap-1 rounded-md bg-white py-0.5 pl-0.5 pr-1.5 text-[10px] font-bold text-ink shadow-md";
 
 const cx = (...parts: (string | undefined)[]) =>
 	parts.filter(Boolean).join(" ");
@@ -13,7 +14,7 @@ const cx = (...parts: (string | undefined)[]) =>
  * Compact trust badge for a directory/detail card (mobile — no hover tooltip):
  * suppliers who carry authorized-dealer brands get an "Authorized" badge; RERA
  * dealers get a "RERA" badge. Returns null for every other case. Mirrors the
- * web `ListingBadge` (which shows the same as a hover tooltip on desktop).
+ * web `ListingBadge` — a white pill with a green shield-check glyph.
  */
 export function ListingBadge({
 	item,
@@ -29,7 +30,10 @@ export function ListingBadge({
 	if (item.category === "material-suppliers" && item.authorizedBrands?.length) {
 		return (
 			<span className={cx(BADGE, className)}>
-				<IonIcon icon={ICONS.check} className="text-[10px]" />
+				<IonIcon
+					icon={ICONS.shieldCheck}
+					className="text-[14px] text-[#16A34A]"
+				/>
 				Authorized
 			</span>
 		);
@@ -37,7 +41,10 @@ export function ListingBadge({
 	if (item.category === "property-dealers" && item.isReraCertified) {
 		return (
 			<span className={cx(BADGE, className)}>
-				<IonIcon icon={ICONS.check} className="text-[10px]" />
+				<IonIcon
+					icon={ICONS.shieldCheck}
+					className="text-[14px] text-[#16A34A]"
+				/>
 				RERA
 			</span>
 		);

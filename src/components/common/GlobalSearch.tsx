@@ -1,22 +1,24 @@
-import { IonIcon, useIonRouter } from "@ionic/react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { IonIcon, useIonRouter, useIonViewWillEnter } from "@ionic/react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { professionalHref, ROUTES } from "@/constants/routes";
 import {
 	globalSearch,
 	type GlobalSearchResult,
-	SEARCH_MAX_LIMIT,
 	SEARCH_MIN_TERM,
 } from "@/lib/api/search";
 import { ICONS } from "@/theme/icons";
 
-type Scope = "professionals" | "leads";
+const EMPTY: GlobalSearchResult = {
+	results: [],
+	count: 0,
+	professionalCount: 0,
+	leadCount: 0,
+};
 
-const EMPTY: GlobalSearchResult = { results: [], count: 0 };
-
-/** Initial hits per group; "Load more" grows by this step up to the API cap. */
-const INITIAL_LIMIT = 6;
-const LIMIT_STEP = 6;
+/** Top matches shown per group (professionals / leads) in the dropdown; "View
+ * all" opens the full directory for the rest. */
+const GROUP_LIMIT = 10;
 
 /** Filler words the highlighter skips — mirrors the API's search tokenizer. */
 const STOP_WORDS = new Set([
@@ -117,65 +119,59 @@ function SearchRowSkeleton() {
 
 /**
  * Home global search — a live typeahead over professionals + leads (mirrors the
- * web hero search). Typing (2+ chars) shows grouped, highlighted suggestions for
- * the active scope; tapping a hit opens it, "Load more" grows the list up to the
- * API cap, and "View all" opens the matching directory pre-filtered with the term.
+ * web hero search). Typing (2+ chars) runs one search and shows BOTH groups at
+ * once — Professionals and Leads — each with its top matches, its total-match
+ * count badge, and a "View all" that opens the matching directory pre-filtered
+ * with the term. Tapping a hit opens it directly.
  */
 export function GlobalSearch() {
 	const router = useIonRouter();
 	const [term, setTerm] = useState("");
-	const [scope, setScope] = useState<Scope>("professionals");
-	const [limit, setLimit] = useState(INITIAL_LIMIT);
 	const [result, setResult] = useState<GlobalSearchResult>(EMPTY);
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
-	const [loadingMore, setLoadingMore] = useState(false);
 	const boxRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	const q = term.trim();
 	const ready = q.length >= SEARCH_MIN_TERM;
 
-	// A fresh query or scope always restarts at the small page size.
-	useEffect(() => {
-		setLimit(INITIAL_LIMIT);
-	}, [q, scope]);
+	// Ionic keeps pages mounted, so this component's state survives navigation.
+	// Reset the search every time Home becomes active — coming back from anywhere
+	// lands on a clean, empty search rather than the previous term/results.
+	useIonViewWillEnter(() => {
+		setTerm("");
+		setResult(EMPTY);
+		setOpen(false);
+		setLoading(false);
+	});
 
-	// Debounced live search for the active scope; "Load more" (a higher `limit`
-	// on the same term) fetches immediately.
+	// Debounced live search across both groups (category "all").
 	useEffect(() => {
 		if (!ready) {
 			setResult(EMPTY);
 			setLoading(false);
-			setLoadingMore(false);
 			return;
 		}
 		const controller = new AbortController();
-		const initial = limit === INITIAL_LIMIT;
-		if (initial) setLoading(true);
-		else setLoadingMore(true);
-		const id = setTimeout(
-			() => {
-				globalSearch(q, limit, scope, controller.signal)
-					.then((res) => {
-						if (controller.signal.aborted) return;
-						setResult(res);
-						setLoading(false);
-						setLoadingMore(false);
-					})
-					.catch(() => {
-						if (controller.signal.aborted) return;
-						setLoading(false);
-						setLoadingMore(false);
-					});
-			},
-			initial ? 300 : 0,
-		);
+		setLoading(true);
+		const id = setTimeout(() => {
+			globalSearch(q, GROUP_LIMIT, "all", controller.signal)
+				.then((res) => {
+					if (controller.signal.aborted) return;
+					setResult(res);
+					setLoading(false);
+				})
+				.catch(() => {
+					if (controller.signal.aborted) return;
+					setLoading(false);
+				});
+		}, 250);
 		return () => {
 			controller.abort();
 			clearTimeout(id);
 		};
-	}, [q, ready, scope, limit]);
+	}, [q, ready]);
 
 	// Close the dropdown on an outside tap.
 	useEffect(() => {
@@ -196,10 +192,14 @@ export function GlobalSearch() {
 		router.push(href, "forward", "push");
 	}
 
-	function viewAll() {
+	function viewAllProfessionals() {
 		if (!q) return;
-		const base = scope === "leads" ? ROUTES.leads : ROUTES.professionals;
-		go(`${base}?search=${encodeURIComponent(q.slice(0, 100))}`);
+		go(`${ROUTES.professionals}?search=${encodeURIComponent(q.slice(0, 100))}`);
+	}
+
+	function viewAllLeads() {
+		if (!q) return;
+		go(`${ROUTES.leads}?search=${encodeURIComponent(q.slice(0, 100))}`);
 	}
 
 	function selectItem(item: GlobalSearchResult["results"][number]) {
@@ -220,19 +220,83 @@ export function GlobalSearch() {
 		inputRef.current?.focus();
 	}
 
-	const rows = result.results;
-	const total = result.count;
-	const hasMore = total > rows.length;
-	const canLoadMore = hasMore && limit < SEARCH_MAX_LIMIT;
-
-	const scopes = useMemo(
-		() =>
-			[
-				{ id: "professionals" as const, label: "Professionals" },
-				{ id: "leads" as const, label: "Leads" },
-			] satisfies { id: Scope; label: string }[],
-		[],
+	const professionalItems = result.results.filter(
+		(r) => r.type === "professional",
 	);
+	const leadItems = result.results.filter((r) => r.type === "lead");
+	const totalHits = result.results.length;
+
+	/** One suggestion row — shared by both groups. */
+	function renderRow(item: GlobalSearchResult["results"][number]) {
+		const detail =
+			item.type === "professional"
+				? item.matches?.length
+					? item.matches.join(", ")
+					: item.profession
+				: undefined;
+		return (
+			<button
+				key={`${item.type}-${item.id}`}
+				type="button"
+				onClick={() => selectItem(item)}
+				className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-muted"
+			>
+				<span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary-light text-primary">
+					<IonIcon
+						icon={item.type === "lead" ? ICONS.lead : ICONS.professional}
+					/>
+				</span>
+				<span className="min-w-0">
+					<span className="block truncate text-sm font-semibold text-ink">
+						<Highlight text={item.title || "Requirement"} term={q} />
+					</span>
+					{detail || item.location ? (
+						<span className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-light">
+							{detail ? (
+								<span className="truncate">
+									<Highlight text={detail} term={q} />
+								</span>
+							) : null}
+							{detail && item.location ? " · " : null}
+							{item.location ? (
+								<>
+									<IonIcon icon={ICONS.location} className="shrink-0" />
+									<span className="truncate">
+										<Highlight text={item.location} term={q} />
+									</span>
+								</>
+							) : null}
+						</span>
+					) : null}
+				</span>
+			</button>
+		);
+	}
+
+	/** A group's heading: title, total-match count badge, and "View all". */
+	function renderGroupHeading(
+		label: string,
+		count: number,
+		onViewAll: () => void,
+	) {
+		return (
+			<div className="flex items-center justify-between gap-2 px-4 pb-1 pt-2">
+				<span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted">
+					{label}
+					<span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-primary-light px-1.5 py-0.5 text-[11px] font-bold leading-none text-primary">
+						{count}
+					</span>
+				</span>
+				<button
+					type="button"
+					onClick={onViewAll}
+					className="shrink-0 rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-primary active:bg-primary-light/50"
+				>
+					View all
+				</button>
+			</div>
+		);
+	}
 
 	return (
 		<div ref={boxRef} className="relative z-30">
@@ -240,7 +304,9 @@ export function GlobalSearch() {
 				role="search"
 				onSubmit={(event) => {
 					event.preventDefault();
-					viewAll();
+					if (professionalItems.length >= leadItems.length)
+						viewAllProfessionals();
+					else viewAllLeads();
 				}}
 				className="flex items-center gap-2 rounded-[10px] border border-line bg-white px-2 py-2 shadow-card-sm"
 			>
@@ -284,122 +350,33 @@ export function GlobalSearch() {
 					id="global-search-suggestions"
 					className="absolute inset-x-0 top-full z-40 mt-2 max-h-[60vh] overflow-y-auto rounded-2xl border border-line bg-white py-2 shadow-lg"
 				>
-					{/* Scope toggle */}
-					<div className="mx-3 mb-1 flex rounded-full border border-line bg-surface-muted p-0.5">
-						{scopes.map((s) => (
-							<button
-								key={s.id}
-								type="button"
-								onClick={() => setScope(s.id)}
-								className={`flex-1 rounded-full py-1.5 text-[13px] font-semibold ${
-									scope === s.id ? "bg-primary text-white" : "text-muted"
-								}`}
-							>
-								{s.label}
-							</button>
-						))}
-					</div>
-
 					{loading ? (
 						<div aria-live="polite" aria-busy="true">
 							{[0, 1, 2].map((i) => (
 								<SearchRowSkeleton key={i} />
 							))}
 						</div>
-					) : rows.length === 0 ? (
+					) : totalHits === 0 ? (
 						<p className="px-4 py-3 text-sm text-muted-light">
 							No results found.
 						</p>
 					) : (
 						<>
-							{/* Group heading + total-match count badge */}
-							<p className="flex items-center gap-2 px-4 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wide text-muted">
-								Results
-								<span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-primary-light px-1.5 py-0.5 text-[11px] font-bold leading-none text-primary">
-									{total}
-								</span>
-							</p>
-
-							{rows.map((item) => {
-								const detail =
-									item.type === "professional"
-										? item.matches?.length
-											? item.matches.join(", ")
-											: item.profession
-										: undefined;
-								return (
-									<button
-										key={`${item.type}-${item.id}`}
-										type="button"
-										onClick={() => selectItem(item)}
-										className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-muted"
-									>
-										<span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary-light text-primary">
-											<IonIcon
-												icon={
-													item.type === "lead" ? ICONS.lead : ICONS.professional
-												}
-											/>
-										</span>
-										<span className="min-w-0">
-											<span className="block truncate text-sm font-semibold text-ink">
-												<Highlight
-													text={item.title || "Requirement"}
-													term={q}
-												/>
-											</span>
-											{detail || item.location ? (
-												<span className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-light">
-													{detail ? (
-														<span className="truncate">
-															<Highlight text={detail} term={q} />
-														</span>
-													) : null}
-													{detail && item.location ? " · " : null}
-													{item.location ? (
-														<>
-															<IonIcon
-																icon={ICONS.location}
-																className="shrink-0"
-															/>
-															<span className="truncate">
-																<Highlight text={item.location} term={q} />
-															</span>
-														</>
-													) : null}
-												</span>
-											) : null}
-										</span>
-									</button>
-								);
-							})}
-
-							{/* Load more (grow to the API cap), then hand off to the full
-							    directory search via "View all". */}
-							{canLoadMore ? (
-								<div className="mt-1 border-t border-line px-4 pb-1 pt-2">
-									<button
-										type="button"
-										disabled={loadingMore}
-										onClick={() =>
-											setLimit((l) =>
-												Math.min(l + LIMIT_STEP, SEARCH_MAX_LIMIT),
-											)
-										}
-										className="w-full rounded-lg py-2 text-center text-sm font-bold text-primary active:bg-primary-light/50 disabled:opacity-60"
-									>
-										{loadingMore ? "Loading…" : "Load more"}
-									</button>
+							{professionalItems.length > 0 ? (
+								<div>
+									{renderGroupHeading(
+										"Professionals",
+										result.professionalCount,
+										viewAllProfessionals,
+									)}
+									{professionalItems.map((item) => renderRow(item))}
 								</div>
-							) : hasMore ? (
-								<div className="mt-1 border-t border-line px-4 pb-1 pt-2">
-									<button
-										type="button"
-										onClick={viewAll}
-										className="w-full rounded-lg py-2 text-center text-sm font-bold text-primary active:bg-primary-light/50"
-									>
-										View all {total} results
-									</button>
+							) : null}
+
+							{leadItems.length > 0 ? (
+								<div>
+									{renderGroupHeading("Leads", result.leadCount, viewAllLeads)}
+									{leadItems.map((item) => renderRow(item))}
 								</div>
 							) : null}
 						</>

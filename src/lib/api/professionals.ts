@@ -134,8 +134,14 @@ export interface DirectoryQuery extends GeoQuery {
 	places?: string[];
 	/** Only professionals with published reviews. */
 	hasReviews?: boolean;
-	/** Only professionals with an approved portfolio. */
+	/** Only professionals with an approved portfolio (suppliers: products). */
 	hasPortfolio?: boolean;
+	/** Only professionals with active leads (suppliers: deals). */
+	hasLeads?: boolean;
+	/** Dealers track: only RERA-certified dealers. */
+	isReraCertified?: boolean;
+	/** Suppliers track: only authorized dealers. */
+	authorizedOnly?: boolean;
 	/** Selected brand ids (suppliers track) — sent as repeated `brand` params. */
 	brands?: string[];
 }
@@ -200,6 +206,9 @@ function buildDirectoryParams(query: DirectoryQuery): URLSearchParams {
 	for (const token of query.places ?? []) params.append("places", token);
 	if (query.hasReviews) params.set("hasReviews", "true");
 	if (query.hasPortfolio) params.set("hasPortfolio", "true");
+	if (query.hasLeads) params.set("hasLeads", "true");
+	if (query.isReraCertified) params.set("isReraCertified", "true");
+	if (query.authorizedOnly) params.set("authorizedOnly", "true");
 	for (const brand of query.brands ?? []) params.append("brand", brand);
 	return params;
 }
@@ -258,6 +267,9 @@ export async function fetchDirectoryFilters(
 	// sent — a facet must not filter its own options.
 	if (query.hasReviews) params.set("hasReviews", "true");
 	if (query.hasPortfolio) params.set("hasPortfolio", "true");
+	if (query.hasLeads) params.set("hasLeads", "true");
+	if (query.isReraCertified) params.set("isReraCertified", "true");
+	if (query.authorizedOnly) params.set("authorizedOnly", "true");
 	// Scope facet counts by the selected city's radius (matches the listing).
 	applyGeoScopeParams(params, query);
 

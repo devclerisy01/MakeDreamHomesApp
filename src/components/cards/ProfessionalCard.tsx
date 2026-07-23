@@ -4,13 +4,11 @@ import { type MouseEvent, useState } from "react";
 import { Avatar } from "@/components/common/Avatar";
 import { ListingBadge } from "@/components/common/ListingBadge";
 import { SaveButton } from "@/components/common/SaveButton";
+import { SupplierCategories } from "@/components/common/SupplierCategories";
+import { listingSupplierCategories } from "@/lib/supplier-categories";
 import { CATEGORY_PLACEHOLDER_ICON } from "@/constants/categories";
 import { REVIEW_SUB_CATEGORIES } from "@/constants/reviews";
-import {
-	encodeProfessionalId,
-	professionalHref,
-	ROUTES,
-} from "@/constants/routes";
+import { professionalHref } from "@/constants/routes";
 import { getImageSrc } from "@/lib/format";
 import { CARD, TAG_MUTED, TAG_PRIMARY } from "@/lib/ui";
 import { ICONS } from "@/theme/icons";
@@ -33,30 +31,6 @@ const TRACK_LABEL: Record<DirectoryCategoryId, string> = {
 	"property-dealers": "Property Dealer",
 	"material-suppliers": "Material Supplier",
 };
-
-/** A "Label: a, b, c +N" meta line (supplier products / brands). */
-function MetaLine({
-	label,
-	items,
-	max = 3,
-}: {
-	label: string;
-	items: string[];
-	max?: number;
-}) {
-	if (!items.length) return null;
-	const shown = items.slice(0, max);
-	const extra = items.length - shown.length;
-	return (
-		<p className="m-0 text-[9px] leading-tight text-ink/80">
-			<span className="font-semibold text-ink">{label}: </span>
-			{shown.join(", ")}
-			{extra > 0 ? (
-				<span className="font-semibold text-primary">{` +${extra}`}</span>
-			) : null}
-		</p>
-	);
-}
 
 export function ProfessionalCard({
 	pro,
@@ -86,19 +60,23 @@ export function ProfessionalCard({
 	const hasRatings = pro.reviewCount > 0 && !!pro.categoryAverages;
 	// Suppliers count "Deals"; everyone else counts "Leads" (mirrors the web).
 	const leadNoun = isSupplier ? "Active Deal" : "Active Lead";
-	// Suppliers show product + brand text instead of a thumbnail strip (web parity).
-	const productTitles = isSupplier
-		? (pro.showcase?.items ?? [])
-				.map((item) => item.title)
-				.filter((title): title is string => !!title)
-		: [];
-	const brands = pro.brands ?? [];
+	// Suppliers show a tappable product count (→ detail Products section).
+	const productCount = pro.showcase?.count ?? 0;
 
-	// Deep-link to this pro's leads without triggering the card's detail link.
+	// Open this pro's detail page and scroll to its Active Leads/Deals section
+	// (mirrors the web card's `section="leads"` link). `preventDefault` stops the
+	// card's own detail link from also firing.
 	function openLeads(event: MouseEvent) {
 		event.preventDefault();
 		event.stopPropagation();
-		router.push(`${ROUTES.leads}?userId=${encodeProfessionalId(pro.id)}`);
+		router.push(`${professionalHref(pro.id)}?section=leads`);
+	}
+
+	// Open this pro's detail page and scroll to its Products/Portfolio section.
+	function openProducts(event: MouseEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		router.push(`${professionalHref(pro.id)}?section=portfolio`);
 	}
 
 	// Toggle the per-category rating breakdown (inside the card link → guard nav).
@@ -115,13 +93,18 @@ export function ProfessionalCard({
 		>
 			<article className={`flex items-start gap-3 p-3 ${CARD}`}>
 				{/* Figma: 93×93 square, radius 5 */}
-				<div className="h-[93px] w-[93px] shrink-0 overflow-hidden rounded-[5px]">
+				<div className="relative h-[93px] w-[93px] shrink-0 overflow-hidden rounded-[5px]">
 					<Avatar
 						name={pro.name}
 						image={pro.image}
 						fill
 						fallbackIcon={CATEGORY_PLACEHOLDER_ICON[pro.category]}
 					/>
+					{/* Trust badge overlaid on the image — matches web. Suppliers show
+					    authorization on the category chips instead, not here. */}
+					{pro.category !== "material-suppliers" ? (
+						<ListingBadge item={pro} className="absolute left-1 top-1 z-10" />
+					) : null}
 				</div>
 				<div className="flex min-w-0 flex-1 flex-col gap-[4px]">
 					<div className="flex items-start justify-between gap-2">
@@ -132,7 +115,6 @@ export function ProfessionalCard({
 							{pro.category === "professionals" && pro.profession ? (
 								<span className={TAG_MUTED}>{pro.profession}</span>
 							) : null}
-							<ListingBadge item={pro} />
 						</div>
 						{hasRatings ? (
 							<button
@@ -203,27 +185,45 @@ export function ProfessionalCard({
 						</span>
 					) : null}
 
-					{/* Figma: SemiBold 10px, #26428B */}
-					{leads > 0 ? (
-						<button
-							type="button"
-							onClick={openLeads}
-							className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-primary"
-						>
-							<IonIcon icon={ICONS.activeLeads} className="text-[12px]" />
-							{leads} {leadNoun}
-							{leads > 1 ? "s" : ""}
-						</button>
+					{/* Stat links — Products (suppliers) + Active Leads/Deals. Each opens
+					    the detail page scrolled to its section. Figma: SemiBold 10px. */}
+					{(isSupplier && productCount > 0) || leads > 0 ? (
+						<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+							{isSupplier && productCount > 0 ? (
+								<button
+									type="button"
+									onClick={openProducts}
+									className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-primary"
+								>
+									<IonIcon icon={ICONS.products} className="text-[12px]" />
+									{productCount} {productCount > 1 ? "Products" : "Product"}
+								</button>
+							) : null}
+							{leads > 0 ? (
+								<button
+									type="button"
+									onClick={openLeads}
+									className="inline-flex w-fit items-center gap-1 text-[10px] font-semibold text-primary"
+								>
+									<IonIcon icon={ICONS.activeLeads} className="text-[12px]" />
+									{leads} {leadNoun}
+									{leads > 1 ? "s" : ""}
+								</button>
+							) : null}
+						</div>
 					) : null}
 
 					{isSupplier ? (
-						/* Suppliers: product + brand text under the description (web parity). */
-						<div className="mt-0.5 flex flex-col gap-1">
+						/* Suppliers: description + Categories chips (with per-category
+						   brands), matching the web card. */
+						<div className="mt-0.5 flex flex-col gap-1.5">
 							<p className="m-0 line-clamp-2 text-[9px] leading-tight text-ink/80">
 								{pro.description}
 							</p>
-							<MetaLine label="Products" items={productTitles} />
-							<MetaLine label="Brands" items={brands} />
+							<SupplierCategories
+								categories={listingSupplierCategories(pro)}
+								className="mt-0.5"
+							/>
 						</div>
 					) : (
 						<div className="flex items-start justify-between gap-2.5">
