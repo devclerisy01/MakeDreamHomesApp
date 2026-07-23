@@ -6,6 +6,7 @@ import {
 } from "@ionic/react";
 import { briefcaseOutline, chatbubbleEllipsesOutline } from "ionicons/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import { EmptyState } from "@/components/common/EmptyState";
 import { conversationHref } from "@/constants/routes";
@@ -17,8 +18,6 @@ import { useAuth } from "@/lib/auth/session";
 import { ICONS } from "@/theme/icons";
 
 const PAGE_SIZE = 15;
-/** Refresh the loaded list this often while the screen is visible. */
-const POLL_MS = 8_000;
 
 function initialsOf(name: string): string {
 	return (
@@ -103,6 +102,7 @@ function ConversationRow({ convo }: { convo: ChatConversation }) {
 export function ConversationList({ reloadKey = 0 }: { reloadKey?: number }) {
 	const { isAuthed } = useAuth();
 	const { openLogin } = useLogin();
+	const { pathname } = useLocation();
 
 	const [items, setItems] = useState<ChatConversation[] | null>(null);
 	const [hasMore, setHasMore] = useState(false);
@@ -122,6 +122,9 @@ export function ConversationList({ reloadKey = 0 }: { reloadKey?: number }) {
 		setHasMore(page.length >= limit);
 	}, []);
 
+	// Load the list on auth, on reload, and whenever the route changes — not on a
+	// timer. Ionic keeps this page mounted, so navigating into a thread and back
+	// (a route change) is what refreshes previews, ordering and unread counts.
 	useEffect(() => {
 		if (!isAuthed) {
 			setItems(null);
@@ -129,14 +132,10 @@ export function ConversationList({ reloadKey = 0 }: { reloadKey?: number }) {
 		}
 		const controller = new AbortController();
 		void load(0, controller.signal).catch(() => setItems([]));
-		const id = setInterval(() => {
-			if (!document.hidden) void load(0).catch(() => {});
-		}, POLL_MS);
 		return () => {
 			controller.abort();
-			clearInterval(id);
 		};
-	}, [isAuthed, load, reloadKey]);
+	}, [isAuthed, load, reloadKey, pathname]);
 
 	const filtered = useMemo(() => {
 		const q = query.trim().toLowerCase();

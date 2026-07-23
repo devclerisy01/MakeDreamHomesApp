@@ -753,11 +753,11 @@ export default function Requirement() {
 					    here and an account is created (via OTP) before the lead posts. */}
 					{!isAuthed ? (
 						<section className={`mb-4 p-4 ${CARD}`}>
-							<div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+							<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
 								<h2 className="m-0 text-[12px] font-bold text-ink">
 									Please enter your details.
 								</h2>
-								<p className="m-0 font-medium text-[11px] w-full text-muted">
+								<p className="m-0 font-medium text-[11px] text-muted">
 									Already have an account?{" "}
 									<button
 										type="button"
@@ -768,7 +768,7 @@ export default function Requirement() {
 									</button>
 								</p>
 							</div>
-							<div className="mt-3 flex flex-col gap-3">
+							<div className="mt-3 grid gap-3 sm:grid-cols-3 sm:items-start">
 								<div id="req-phone">
 									<PhoneField
 										value={phone}
@@ -776,48 +776,46 @@ export default function Requirement() {
 											setPhone(digits);
 											if (phoneError) setPhoneError(null);
 										}}
-										error={phoneError}
+										error={phoneTaken ? null : phoneError}
+									/>
+									{phoneTaken ? (
+										<p className="mt-1.5 text-[11px] text-danger">
+											This phone number is already registered.{" "}
+											<button
+												type="button"
+												onClick={() => openLogin({ phone })}
+												className="font-semibold underline"
+											>
+												Log in instead
+											</button>
+										</p>
+									) : null}
+								</div>
+								<div id="req-name">
+									<span className="mb-1.5 block text-[12px] font-bold text-ink">
+										First name
+									</span>
+									<TextField
+										value={firstName}
+										onChange={(value) => {
+											setFirstName(value);
+											if (nameError) setNameError(null);
+										}}
+										placeholder="First name"
+										autoCapitalize="words"
+										error={nameError}
 									/>
 								</div>
-								{phoneTaken ? (
-									<p className="-mt-1 text-[11px] text-danger">
-										This number is already registered.{" "}
-										<button
-											type="button"
-											onClick={() => openLogin({ phone })}
-											className="font-semibold underline"
-										>
-											Log in instead
-										</button>
-									</p>
-								) : null}
-								<div className="grid grid-cols-2 gap-3">
-									<div id="req-name">
-										<span className="mb-1.5 block text-[12px] font-bold text-ink">
-											First name
-										</span>
-										<TextField
-											value={firstName}
-											onChange={(value) => {
-												setFirstName(value);
-												if (nameError) setNameError(null);
-											}}
-											placeholder="First name"
-											autoCapitalize="words"
-											error={nameError}
-										/>
-									</div>
-									<div>
-										<span className="mb-1.5 block text-[12px] font-bold text-ink">
-											Last name
-										</span>
-										<TextField
-											value={lastName}
-											onChange={setLastName}
-											placeholder="Last name"
-											autoCapitalize="words"
-										/>
-									</div>
+								<div>
+									<span className="mb-1.5 block text-[12px] font-bold text-ink">
+										Last name
+									</span>
+									<TextField
+										value={lastName}
+										onChange={setLastName}
+										placeholder="Last name"
+										autoCapitalize="words"
+									/>
 								</div>
 							</div>
 						</section>
@@ -1010,62 +1008,28 @@ export default function Requirement() {
 									{otherField}
 								</>
 							)}
-
-							{showAttachment ? (
-								<div className="mt-4">
-									<span className="mb-2 block text-[12px] font-bold text-ink">
-										Upload images{" "}
-									</span>
-									<div className="flex flex-wrap gap-2">
-										{attachments.map((item, index) => (
-											<div
-												key={item.url}
-												className="relative h-16 w-16 overflow-hidden rounded-lg border border-line"
-											>
-												<button
-													type="button"
-													onClick={() => setAttachmentPreview(index)}
-													aria-label="Preview photo"
-													className="block h-full w-full"
-												>
-													<img
-														src={item.url}
-														alt=""
-														className="h-full w-full object-cover"
-													/>
-												</button>
-												<button
-													type="button"
-													onClick={() => removeAttachment(index)}
-													aria-label="Remove photo"
-													className="absolute right-0.5 top-0.5 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-white"
-												>
-													<IonIcon icon={ICONS.close} className="text-xs" />
-												</button>
-											</div>
-										))}
-										{attachments.length < MAX_FILES ? (
-											<label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-line text-muted-light">
-												<IonIcon icon={ICONS.image} className="text-xl" />
-												<span className="text-[10px] font-semibold">Add</span>
-												<input
-													type="file"
-													accept="image/*"
-													multiple
-													className="hidden"
-													onChange={onFilesChange}
-												/>
-											</label>
-										) : null}
-									</div>
-									{fileError ? (
-										<p className="mt-1.5 text-[11px] text-danger">
-											{fileError}
-										</p>
-									) : null}
-								</div>
-							) : null}
 						</div>
+					</section>
+
+					<section className={`mt-4 p-4 ${CARD}`}>
+						<h2
+							id="req-address"
+							className="m-0 mb-1.5 text-[12px] font-bold text-ink"
+						>
+							{isBuyProperty ? "Preferred localities" : "Address"}
+						</h2>
+						{isBuyProperty ? (
+							<p className="mb-1.5 -mt-0.5 text-[10px] text-muted-light">
+								Add up to 5 localities within 50 km of the first.
+							</p>
+						) : null}
+						<LocalityPicker
+							value={localities}
+							onChange={setLocalities}
+							max={maxLocalities}
+							error={addressError}
+							onErrorClear={() => setAddressError(null)}
+						/>
 					</section>
 
 					<section className={`mt-4 p-4 ${CARD}`}>
@@ -1104,29 +1068,12 @@ export default function Requirement() {
 								{descriptionError}
 							</p>
 						) : null}
+					</section>
 
-						<span
-							id="req-address"
-							className="mb-1.5 mt-4 block text-[12px] font-bold text-ink"
-						>
-							{isBuyProperty ? "Preferred localities" : "Address"}
-						</span>
-						{isBuyProperty ? (
-							<p className="mb-1.5 -mt-0.5 text-[10px] text-muted-light">
-								Add up to 5 localities within 50 km of the first.
-							</p>
-						) : null}
-						<LocalityPicker
-							value={localities}
-							onChange={setLocalities}
-							max={maxLocalities}
-							error={addressError}
-							onErrorClear={() => setAddressError(null)}
-						/>
-
-						<span className="mb-1.5 mt-4 block text-[12px] font-bold text-ink">
+					<section className={`mt-4 p-4 ${CARD}`}>
+						<h2 className="m-0 mb-3 text-[12px] font-bold text-ink">
 							Estimated price
-						</span>
+						</h2>
 						<div className="flex gap-2">
 							<input
 								type="tel"
@@ -1167,6 +1114,59 @@ export default function Requirement() {
 							</button>
 						</div>
 					</section>
+
+					{showAttachment ? (
+						<section className={`mt-4 p-4 ${CARD}`}>
+							<h2 className="m-0 mb-3 text-[12px] font-bold text-ink">
+								Upload images
+							</h2>
+							<div className="flex flex-wrap gap-2">
+								{attachments.map((item, index) => (
+									<div
+										key={item.url}
+										className="relative h-16 w-16 overflow-hidden rounded-lg border border-line"
+									>
+										<button
+											type="button"
+											onClick={() => setAttachmentPreview(index)}
+											aria-label="Preview photo"
+											className="block h-full w-full"
+										>
+											<img
+												src={item.url}
+												alt=""
+												className="h-full w-full object-cover"
+											/>
+										</button>
+										<button
+											type="button"
+											onClick={() => removeAttachment(index)}
+											aria-label="Remove photo"
+											className="absolute right-0.5 top-0.5 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-white"
+										>
+											<IonIcon icon={ICONS.close} className="text-xs" />
+										</button>
+									</div>
+								))}
+								{attachments.length < MAX_FILES ? (
+									<label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-line text-muted-light">
+										<IonIcon icon={ICONS.image} className="text-xl" />
+										<span className="text-[10px] font-semibold">Add</span>
+										<input
+											type="file"
+											accept="image/*"
+											multiple
+											className="hidden"
+											onChange={onFilesChange}
+										/>
+									</label>
+								) : null}
+							</div>
+							{fileError ? (
+								<p className="mt-1.5 text-[11px] text-danger">{fileError}</p>
+							) : null}
+						</section>
+					) : null}
 
 					{!isAuthed ? (
 						<div id="req-terms" className="mt-4">
